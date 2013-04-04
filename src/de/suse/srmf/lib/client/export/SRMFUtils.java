@@ -165,7 +165,11 @@ public class SRMFUtils {
             }
             if (inArg.contains("=")) {
                 String[] keyset = inArg.split("=", 2);
-                params.put(keyset[0], keyset[1].split(","));
+                if (keyset[1].startsWith("{") && keyset[1].endsWith("}")) {
+                    params.put(keyset[0], new String[]{keyset[1].substring(1, keyset[1].length() - 1)});
+                } else {
+                    params.put(keyset[0], keyset[1].split(","));
+                }
             }
         }
         return params;

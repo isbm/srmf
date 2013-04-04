@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <object-map>
   <destination name="cfengine-3" title="CFengine v.3 configuration management system">
-    <ref namespace="root/cimv2" base="CIM_Process" id="cim-process-cfengine3"/>
+    <ref id="process-list" render="cim-process-cfengine3"/>
   </destination>
   <destination name="text" title="ASCII plain text">
-    <ref namespace="root/cimv2" base="CIM_Process" id="cim-process-text"/>
+    <ref id="process-list" render="cim-process-text"/>
   </destination>
 </object-map>
 

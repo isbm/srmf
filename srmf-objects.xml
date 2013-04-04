@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<objects>
+  <object id="process-list" path="root/cimv2:CIM_Process" title="List of processes"/>
+  <object id="computer-system" path="root/cimv2:CIM_ComputerSystem" title="Computer system" />
+  <object id="something-crazy" path="root/cimv2" title="Some queried object">
+    <query>
+      <![CDATA[
+         SELECT Name, PrimaryOwnerContact, PrimaryOwnerName FROM CIM_ComputerSystem
+      ]]>
+    </query>
+  </object>
+</objects>

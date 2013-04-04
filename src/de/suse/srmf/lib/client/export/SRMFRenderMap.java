@@ -36,10 +36,13 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javax.xml.parsers.ParserConfigurationException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
@@ -50,8 +53,73 @@ import org.xml.sax.SAXException;
 public class SRMFRenderMap {
     public static final String DEFAUILT_SRMF_RENDER_PATH = "/etc/srmf/renderers";
     private List<SRMFMapDestination> rmap;
+    private Map<String, SRMFMapProvider> rproviders;
     private final File renderers;
 
+    /**
+     * Provider description.
+     */
+    public static class SRMFMapProvider {
+        private String namespace;
+        private String id;
+        private String title;
+        private String query;
+        private String objectClass;
+
+
+        public SRMFMapProvider(String path, String id, String title, String query) throws Exception {
+            String nsp = null;
+            String cls = null;
+            if (path.contains(":")) {
+                String[] tokens = path.split(":", 2);
+                if (tokens.length == 2) {
+                    nsp = tokens[0];
+                    cls = tokens[1];
+                }
+            } else {
+                nsp = path;
+            }
+
+            // Cleanup query
+            if (query != null && query.trim().isEmpty()) {
+                query = null;
+            }
+            if (query != null) {
+                query = query.trim();
+            } else if (query == null && cls != null) {
+                query = "SELECT * FROM " + cls;
+            } else {
+                throw new Exception(String.format("Unable to parse object! Path: %s, ID: %s", path, id));
+            }
+
+            this.namespace = nsp;
+            this.objectClass = cls;
+            this.id = id;
+            this.title = title;
+            this.query = query;
+        }
+
+        public String getObjectClass() {
+            return objectClass;
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public String getNamespace() {
+            return namespace;
+        }
+
+        public String getQuery() {
+            return query;
+        }
+
+        public String getTitle() {
+            return title;
+        }
+    }
+    
     /**
      * Map destinations
      */
@@ -60,26 +128,20 @@ public class SRMFRenderMap {
          * Map rendering reference
          */
         public static class SRMFMapRef {
-            private String namespace;
-            private String base; // Root base class threshold. Allows to specify higher levels with other render.
+            private String render;
             private String id;
 
-            public SRMFMapRef(String namespace, String base, String id) {
-                this.namespace = namespace;
-                this.base = base;
+            public SRMFMapRef(String id, String render) {
                 this.id = id;
-            }
-
-            public String getNamespace() {
-                return namespace;
-            }
-
-            public String getBase() {
-                return base;
+                this.render = render;
             }
 
             public String getId() {
                 return id;
+            }
+
+            public String getRender() {
+                return render;
             }
         }
         
@@ -137,13 +199,14 @@ public class SRMFRenderMap {
 
 
     /**
-     * Render map.
+     * Render map constructor.
      * 
      * @param renderMapXMLSource 
      */
     public SRMFRenderMap(File renderers) {
         this.renderers = renderers;
         this.rmap = new ArrayList<SRMFMapDestination>();
+        this.rproviders = new HashMap<String, SRMFMapProvider>();
     }
     
     /**
@@ -151,11 +214,12 @@ public class SRMFRenderMap {
      * 
      * @param mapping 
      */
-    public void loadFromFile(File mapping)
+    public void loadFromFile(File mapping, File providers)
             throws IOException,
                    ParserConfigurationException,
-                   SAXException {
-        this.init(SRMFUtils.getXMLDocumentFromFile(mapping));
+                   SAXException,
+                   Exception {
+        this.init(SRMFUtils.getXMLDocumentFromFile(mapping), SRMFUtils.getXMLDocumentFromFile(providers));
     }
 
 
@@ -164,9 +228,22 @@ public class SRMFRenderMap {
      * 
      * @param doc 
      */
-    private void init(Document doc) {
+    private void init(Document mapping, Document providers) throws Exception {
+        // Load providers
+        this.rproviders.clear();
+        NodeList objectsNodeList = providers.getElementsByTagName("object");
+        for (int i = 0; i < objectsNodeList.getLength(); i++) {
+            Element objElement = (Element) objectsNodeList.item(i);
+            SRMFMapProvider provider = new SRMFMapProvider(objElement.getAttribute("path"), 
+                                                           objElement.getAttribute("id"),
+                                                           objElement.getAttribute("title"),
+                                                           this.getQuery(objElement));
+            this.rproviders.put(provider.getId(), provider);
+        }
+        
+        // Load mapping
         this.rmap.clear();
-        NodeList destinationNodeList = doc.getElementsByTagName("destination");
+        NodeList destinationNodeList = mapping.getElementsByTagName("destination");
         for (int i = 0; i < destinationNodeList.getLength(); i++) {
             Element destElement = (Element) destinationNodeList.item(i);
             SRMFMapDestination destination = new SRMFMapDestination(destElement.getAttribute("name"),
@@ -174,12 +251,54 @@ public class SRMFRenderMap {
             NodeList refNodeList = destElement.getElementsByTagName("ref");
             for (int j = 0; j < refNodeList.getLength(); j++) {
                 Element refElement = (Element) refNodeList.item(j);
-                destination.addReference(new SRMFMapDestination.SRMFMapRef(refElement.getAttribute("namespace"),
-                                                                           refElement.getAttribute("base"), 
-                                                                           refElement.getAttribute("id")));
+                destination.addReference(new SRMFMapDestination.SRMFMapRef(refElement.getAttribute("id"),
+                                                                           refElement.getAttribute("render")));
             }
             this.rmap.add(destination);
         }
+    }
+    
+    
+    /**
+     * Get query from the object element.
+     * Currently only first query (all others are ignored).
+     * 
+     * @param obj
+     * @return 
+     */
+    private String getQuery(Element obj) {
+        NodeList queries = obj.getElementsByTagName("query");
+        for (int i = 0; i < queries.getLength(); i++) {
+            NodeList qnodes = ((Element) queries.item(i)).getChildNodes();
+            for (int j = 0; j < qnodes.getLength(); j++) {
+                Node qnode = qnodes.item(j);
+                if (qnode.getNodeType() == Document.CDATA_SECTION_NODE) {
+                    return qnode.getNodeValue().trim();
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Get provider object by ID.
+     * 
+     * @param id
+     * @return 
+     */
+    public SRMFMapProvider getProviderByID(String id) {
+        return this.rproviders.get(id);
+    }
+
+    
+    /**
+     * Get all available providers.
+     * 
+     * @return 
+     */
+    public List<SRMFMapProvider> getProviders() {
+        return Collections.unmodifiableList(new ArrayList<SRMFMapProvider>(this.rproviders.values()));
     }
 
 

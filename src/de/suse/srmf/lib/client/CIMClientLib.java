@@ -39,6 +39,7 @@ import de.suse.srmf.lib.client.export.SRMFStorage;
 import de.suse.srmf.lib.client.export.SRMFUtils;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.net.URL;
 import java.util.List;
 import java.util.Locale;
@@ -100,6 +101,10 @@ class SRMFMessageMeta {
  * @author bo
  */
 public class CIMClientLib {
+    public static final String SRMF_MAP_FILE = "srmf-map.xml";
+    public static final String SRMF_OBJ_FILE = "srmf-objects.xml";
+    public static final String SRMF_UNIX_DEFAULT_CONF_PATH = "/etc/srmf/conf";
+
     private WBEMClient client;
     private String namespace;
     private boolean traceMode;
@@ -144,7 +149,6 @@ public class CIMClientLib {
                             System.err.println("Error writing provider data: " + ex.getLocalizedMessage());
                         }
 
-                        CIMClientLib.this.localStorage.storeMessage(null);
                         CIMClientLib.this.currentSRMFMessageMeta = null;
                     }
 
@@ -164,8 +168,10 @@ public class CIMClientLib {
         // Render map
         this.exportSRMFRenderMap = new SRMFRenderMap(new File(setup.getProperty(".srmf.manifest.renderers",
                                                                                 SRMFRenderMap.DEFAUILT_SRMF_RENDER_PATH)));
-        File srmfMap = new File("/etc/srmf-map.conf");
-        this.exportSRMFRenderMap.loadFromFile(srmfMap.exists() ? srmfMap : new File("srmf-map.conf"));
+        File srmfMap = new File(String.format("%s/%s", CIMClientLib.SRMF_UNIX_DEFAULT_CONF_PATH, CIMClientLib.SRMF_MAP_FILE));
+        File srmfObjects = new File(String.format("%s/%s", CIMClientLib.SRMF_UNIX_DEFAULT_CONF_PATH, CIMClientLib.SRMF_OBJ_FILE));
+        this.exportSRMFRenderMap.loadFromFile(srmfMap.exists() ? srmfMap : new File(CIMClientLib.SRMF_MAP_FILE),
+                                              srmfObjects.exists() ? srmfObjects : new File(CIMClientLib.SRMF_OBJ_FILE));
 
         // CIM Client
         URL location = new URL(String.format("%s://%s:%s", 
@@ -252,36 +258,25 @@ public class CIMClientLib {
             SRMFRenderMap.SRMFMapDestination destination = renderIds.get(i);
             System.err.println(String.format("%s\t%s", destination.getName(), destination.getTitle()));
         }
-
-        System.exit(0);
     }
-    
-    
+
+
     /**
-     * Snapshots the manifest to the current state (no versions support).
+     * Makes a snapshot of the manifest to the current state (no versions support).
      * 
-     * XXX: This implementation is only for research and demonstration purposes.
-     *      Because client hangs at some providers, right now amount of them
-     *      is limited by explicitly specifying them in the config file.
-     *      However, it supposed to work by browsing it entirely.
+     * @throws Exception 
      */
     public void doManifestSnapshot() throws Exception {
-        // XXX: This method must be reimplemented without limitation list!
         this.traceMode = true;
-        File localProviders = new File("/etc/srmf/srmf-local-providers.conf");
-        NodeList providers = SRMFUtils.getXMLDocumentFromFile(localProviders.canRead() ? localProviders : new File("srmf-local-providers.conf"))
-                                      .getElementsByTagName("provider");
-        for (int i = 0; i < providers.getLength(); i++) {
-            Element provider = (Element) providers.item(i);
-            this.currentSRMFMessageMeta = new SRMFMessageMeta(provider.getAttribute("id"),
-                                                              provider.getAttribute("id"),
-                                                              provider.getAttribute("namespace"));
-            client.execQuery(new CIMObjectPath("", this.currentSRMFMessageMeta.getNamespace()),
-                             "select * from " + this.currentSRMFMessageMeta.getProviderClass(), "WQL");
-       }
+        List<SRMFRenderMap.SRMFMapProvider> providers = this.exportSRMFRenderMap.getProviders();
+        for (int i = 0; i < providers.size(); i++) {
+            SRMFRenderMap.SRMFMapProvider sRMFMapProvider = providers.get(i);
+            this.currentSRMFMessageMeta = new SRMFMessageMeta(sRMFMapProvider.getObjectClass(), // XXX: Traverse this thing in the future.
+                                                              sRMFMapProvider.getObjectClass(),
+                                                              sRMFMapProvider.getNamespace());
+            client.execQuery(new CIMObjectPath("", sRMFMapProvider.getNamespace()), sRMFMapProvider.getQuery(), "WQL");
+        }
         this.traceMode = false;
-
-        System.exit(0);
     }
 
 
@@ -310,18 +305,39 @@ public class CIMClientLib {
         List<SRMFRenderMap.SRMFMapDestination.SRMFMapRef> references = dst.getReferences();
         for (int i = 0; i < references.size(); i++) {
             SRMFRenderMap.SRMFMapDestination.SRMFMapRef sRMFMapRef = references.get(i);
+            SRMFRenderMap.SRMFMapProvider sRMFMapProvider = this.exportSRMFRenderMap.getProviderByID(sRMFMapRef.getId());
             try {
-                this.currentSRMFMapRefID = sRMFMapRef.getId();
-                CloseableIterator<CIMInstance> it = client.execQuery(new CIMObjectPath("", sRMFMapRef.getNamespace()),
-                                                                     "select * from " + sRMFMapRef.getBase(), "WQL");
+                this.currentSRMFMapRefID = sRMFMapRef.getRender();
+                CloseableIterator<CIMInstance> it = client.execQuery(new CIMObjectPath("", sRMFMapProvider.getNamespace()),
+                                                                     sRMFMapProvider.getQuery(), "WQL");
             } catch (Exception ex) {
-                System.err.println(String.format("Failed to render %s provider for %s!", sRMFMapRef.getBase(), dst.getTitle()));
+                System.err.println(String.format("Failed to render \"%s\" provider for %s!", sRMFMapProvider.getId(), dst.getTitle()));
             }
-        this.traceMode = false;
-      }
-        
-        System.exit(0);
+            this.traceMode = false;
+        }
     }
+    
+
+    /**
+     * Process compound object.
+     * 
+     * @param query 
+     */
+    public void doCompound(String query) {
+        this.traceMode = true;
+        try {
+            CloseableIterator<CIMInstance> it = client.execQuery(new CIMObjectPath("", this.namespace), query, "WQL");
+            while (it.hasNext()){
+                System.out.println(it.next());
+            }
+            it.close();
+        } catch (Exception ex) {
+            System.err.println(String.format(">>> Failed to process \"%s\" query!", query));
+        }
+
+        this.traceMode = false;
+    }
+
 
     /**
      * Serialize CIM instance.
@@ -350,6 +366,7 @@ public class CIMClientLib {
         System.err.println("\t--snapshot\t\t\tSnapshot current service manifest.");
         System.err.println("\t--available-cms\t\t\tList of supported CMS.");
         System.err.println("\t--help\t\t\t\tThis help text.\n");
+        // --test    Anything for trying something :-)
         System.exit(0);
     }
     
@@ -358,8 +375,15 @@ public class CIMClientLib {
      * @param args
      * @throws Exception 
      */
-    public static void main(String[] args) throws Exception {
-        Map<String, String[]> params = SRMFUtils.getArgs(args, "show-classes", "available-cms", "snapshot");
+    public static void main(String[] args) {
+        Map<String, String[]> params = null;
+        try {
+            params = SRMFUtils.getArgs(args, "show-classes", "available-cms", "snapshot");
+        } catch (Exception ex) {
+            System.err.println("Error: " + ex.getLocalizedMessage());
+            System.exit(0);
+        }
+
         if (params.isEmpty() || params.get("help") != null) {
             CIMClientLib.usage();
         }
@@ -367,7 +391,9 @@ public class CIMClientLib {
         try{
             SRMFUtils.checkParams(params,
                                      new String[]{"hostname"},
-                                     new String[]{"describe", "show-classes", "export", "available-cms", "snapshot"});
+                                     new String[]{"describe", "show-classes", 
+                                                  "export", "available-cms",
+                                                  "snapshot", "test"});
         } catch (Exception ex) {
             System.err.println("Error: " + ex.getLocalizedMessage());
             System.exit(0);
@@ -379,7 +405,11 @@ public class CIMClientLib {
 
         File setupFile = new File(params.get("config") != null ? params.get("config")[0] : "/etc/srmf.conf");
         if (!setupFile.exists()) {
-            System.err.println(String.format("Warning: %s does not exists. Using default in current directly.", setupFile.getCanonicalPath()));
+            try {
+                System.err.println(String.format("Warning: %s does not exists. Using default in current directly.", setupFile.getCanonicalPath()));
+            } catch (IOException ex) {
+                Logger.getLogger(CIMClientLib.class.getName()).log(Level.SEVERE, null, ex);
+            }
             setupFile = new File("srmf.conf");
         }
 
@@ -389,23 +419,37 @@ public class CIMClientLib {
         }
         
         Properties setup = new Properties();
-        setup.load(new FileInputStream(setupFile));
-        CIMClientLib toy = new CIMClientLib(params.get("hostname")[0], setup);
-        toy.setNamespace(params.get("namespace")[0]);
+        try {
+            setup.load(new FileInputStream(setupFile));
+        } catch (IOException ex) {
+            System.err.println("Error loading configuration: " + ex.getLocalizedMessage());
+            System.exit(0);
+        }
 
-        if (params.containsKey("snapshot")) {
-            toy.doManifestSnapshot();
-        } else if (params.containsKey("available-cms")) {
-            toy.doShowAvailableCMSExports();
-        } else if (params.containsKey("export")) {
-            toy.doExportToDestination(params.get("export"));
-        } else if (params.containsKey("describe")) {
-            toy.doInspectObjects(params.get("describe"));
-        } else if (params.containsKey("show-classes")) {
-            toy.doEnumerateClasses();
-        } else {
-            CIMClientLib.usage();
-            System.err.println("Error:\n\tWrong parameters.");
-        }       
+        // Run! :)
+        try {
+            CIMClientLib cimclient = new CIMClientLib(params.get("hostname")[0], setup);
+            cimclient.setNamespace(params.get("namespace")[0]);
+            
+            if (params.containsKey("snapshot")) {
+                cimclient.doManifestSnapshot();
+            } else if (params.containsKey("available-cms")) {
+                cimclient.doShowAvailableCMSExports();
+            } else if (params.containsKey("export")) {
+                cimclient.doExportToDestination(params.get("export"));
+            } else if (params.containsKey("describe")) {
+                cimclient.doInspectObjects(params.get("describe"));
+            } else if (params.containsKey("show-classes")) {
+                cimclient.doEnumerateClasses();
+            } else if (params.containsKey("test")) {
+                cimclient.doCompound(params.get("test")[0]);
+            } else {
+                CIMClientLib.usage();
+                System.err.println("Error:\n\tWrong parameters.");
+            }
+        } catch (Exception ex) {
+            //ex.printStackTrace();
+            System.err.println("Error: " + ex.getLocalizedMessage());
+        }
     }
 }
