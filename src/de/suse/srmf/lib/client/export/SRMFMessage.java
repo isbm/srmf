@@ -40,6 +40,7 @@ import org.xml.sax.SAXException;
  * @author bo
  */
 public class SRMFMessage {
+    private String objectId;
     private String baseClassName;
     private String className;
     private Document document;
@@ -51,13 +52,24 @@ public class SRMFMessage {
      * @param className
      * @param source 
      */
-    public SRMFMessage(String baseClassName, String className, String source)
+    public SRMFMessage(String objectId, String baseClassName, String className, String source)
             throws ParserConfigurationException,
                    SAXException,
                    IOException {
+        this.objectId = objectId;
         this.baseClassName = baseClassName;
         this.className = className;
         this.document = SRMFUtils.getXMLDocumentFromString(source);
+    }
+
+    
+    /**
+     * Get object ID.
+     * 
+     * @return 
+     */
+    public String getObjectId() {
+        return objectId;
     }
 
     

@@ -79,7 +79,7 @@ public class SRMFLocalStorage implements SRMFStorage {
     
     @Override
     public void storeMessage(SRMFMessage message) {
-        File outfh = new File(this.path.getAbsolutePath() + "/" + message.getClassName().toLowerCase() + ".lmx"); // .lmx for compressed
+        File outfh = new File(this.path.getAbsolutePath() + "/" + message.getObjectId().toLowerCase() + ".lmx"); // .lmx for compressed
         try {
             new FileOutputStream(outfh).write(this.getMessageSource(message));
             System.err.println("> Written " + outfh.getAbsolutePath());

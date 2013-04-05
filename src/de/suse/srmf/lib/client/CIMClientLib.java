@@ -61,8 +61,6 @@ import org.sblim.cimclient.CIMXMLTraceListener;
 import org.sblim.cimclient.internal.cimxml.CIMClientXML_HelperImpl;
 import org.sblim.cimclient.internal.cimxml.CimXmlSerializer;
 import org.sblim.cimclient.internal.logging.LogAndTraceBroker;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
 
 
 
@@ -75,8 +73,10 @@ class SRMFMessageMeta {
     private String providerBaseClass;
     private String providerClass;
     private String namespace;
+    private String objectId;
 
-    public SRMFMessageMeta(String providerBaseClass, String providerClass, String namespace) {
+    public SRMFMessageMeta(String objectId, String providerBaseClass, String providerClass, String namespace) {
+        this.objectId = objectId;
         this.providerBaseClass = providerBaseClass;
         this.providerClass = providerClass;
         this.namespace = namespace;
@@ -92,6 +92,10 @@ class SRMFMessageMeta {
 
     public String getProviderClass() {
         return providerClass;
+    }
+
+    public String getObjectId() {
+        return objectId;
     }
 }
 
@@ -142,10 +146,12 @@ public class CIMClientLib {
                     // Export
                     else if (CIMClientLib.this.currentSRMFMessageMeta != null) {
                         try {
-                            CIMClientLib.this.localStorage.storeMessage(new SRMFMessage(CIMClientLib.this.currentSRMFMessageMeta.getProviderBaseClass(),
+                            CIMClientLib.this.localStorage.storeMessage(new SRMFMessage(CIMClientLib.this.currentSRMFMessageMeta.getObjectId(),
+                                                                                        CIMClientLib.this.currentSRMFMessageMeta.getProviderBaseClass(),
                                                                                         CIMClientLib.this.currentSRMFMessageMeta.getProviderBaseClass(),
                                                                                         message));
                         } catch (Exception ex) {
+                            ex.printStackTrace();
                             System.err.println("Error writing provider data: " + ex.getLocalizedMessage());
                         }
 
@@ -271,7 +277,8 @@ public class CIMClientLib {
         List<SRMFRenderMap.SRMFMapProvider> providers = this.exportSRMFRenderMap.getProviders();
         for (int i = 0; i < providers.size(); i++) {
             SRMFRenderMap.SRMFMapProvider sRMFMapProvider = providers.get(i);
-            this.currentSRMFMessageMeta = new SRMFMessageMeta(sRMFMapProvider.getObjectClass(), // XXX: Traverse this thing in the future.
+            this.currentSRMFMessageMeta = new SRMFMessageMeta(sRMFMapProvider.getId(),
+                                                              sRMFMapProvider.getObjectClass(), // XXX: Traverse base class in the future.
                                                               sRMFMapProvider.getObjectClass(),
                                                               sRMFMapProvider.getNamespace());
             client.execQuery(new CIMObjectPath("", sRMFMapProvider.getNamespace()), sRMFMapProvider.getQuery(), "WQL");
