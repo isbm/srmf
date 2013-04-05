@@ -21,13 +21,15 @@ This is the main config to describe the entire service (one box or many):
 3. Set your manifest path other than /tmp :)
 4. Configure your host auth. Syntax is: "hostname/qualifier". Qualifiers are: "proto" for protocol; "port" for port; "user" is for user name to authenticate against CIM broker and "password" is the password there.
 
-### SRMF description config
+### SRMF object providers for entity description
 
-This config is for gathering system description (srmf-local-providers.conf). At the moment there is no mechanism used for making sure some providers not hanging etc, hence it exists. In a fugure it might be only optional or disappear at all.
+This config is for gathering system description (srmf-objects.xml). At the moment there is no mechanism used for making sure some providers not hanging etc, hence it exists. In a fugure it might be only optional or disappear at all.
 
-### SRMF deployment config
+Objects can be combined into one as well, using WBEM Query Language. More: http://www.wbemsolutions.com/tutorials/DMTF/wbem-cql.html
 
-Deployment config (srmf-map.conf) exists for mapping rendering XSL stylesheets to particular providers.
+### SRMF object mapping for manifest export and deploying
+
+Deployment config (srmf-map.xml) exists for mapping rendering XSL stylesheets to particular providers. Map refers to the object providers above and can select which of the objects "in charge" to go "outside" of the description. In other words, not all objects needs to be exported to particular destinations, like plain text or some CMS etc.
 
 Usage Examples
 --------------
