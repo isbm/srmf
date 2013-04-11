@@ -130,7 +130,7 @@ public class CIMClientLib {
             @Override
             public void traceCIMXML(Level level, String message, boolean isRequest) {
                 if (!isRequest && CIMClientLib.this.traceMode) {
-                    message = "<?xml" + message.split("<?xml")[1].split("</CIM>")[0] + "</CIM>";
+                    message = "<?xml" + message.split("\\<\\?xml", 2)[1].split("</CIM>")[0] + "</CIM>";
                     
                     // Render
                     if (CIMClientLib.this.currentSRMFMapRefID != null) {
@@ -330,14 +330,10 @@ public class CIMClientLib {
      * 
      * @param query 
      */
-    public void doCompound(String query) {
+    public void doQuery(String query) {
         this.traceMode = true;
         try {
-            CloseableIterator<CIMInstance> it = client.execQuery(new CIMObjectPath("", this.namespace), query, "WQL");
-            while (it.hasNext()){
-                System.out.println(it.next());
-            }
-            it.close();
+            client.execQuery(new CIMObjectPath("", this.namespace), query, "WQL");
         } catch (Exception ex) {
             System.err.println(String.format(">>> Failed to process \"%s\" query!", query));
         }
@@ -345,6 +341,24 @@ public class CIMClientLib {
         this.traceMode = false;
     }
 
+    
+    /**
+     * Enumerates all the class instances
+     * @param className 
+     */
+    public void enumClassInstances(String className) {
+        try {
+            this.traceMode = true;
+            CloseableIterator<CIMInstance> it = this.client.enumerateInstances(new CIMObjectPath(className, this.namespace), true, false, true, null);
+                //while (it.hasNext()){
+                //    System.out.println(it.next());
+                //}        
+                it.close();
+        } catch (WBEMException ex) {
+            Logger.getLogger(CIMClientLib.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        this.traceMode = false;
+    }
 
     /**
      * Serialize CIM instance.
@@ -370,6 +384,7 @@ public class CIMClientLib {
         System.err.println("\t--describe=<Object,Object...>\tDescribe an array of objects (or just one).");
         System.err.println("\t--namespace=<value>\t\tNamespace on the target machine.");
         System.err.println("\t--export=<value>\t\tExport for deployment with particular CMS.");
+        System.err.println("\t--query={...}\t\tWQL query block.");
         System.err.println("\t--snapshot\t\t\tSnapshot current service manifest.");
         System.err.println("\t--available-cms\t\t\tList of supported CMS.");
         System.err.println("\t--help\t\t\t\tThis help text.\n");
@@ -397,10 +412,10 @@ public class CIMClientLib {
 
         try{
             SRMFUtils.checkParams(params,
-                                     new String[]{"hostname"},
-                                     new String[]{"describe", "show-classes", 
-                                                  "export", "available-cms",
-                                                  "snapshot", "test"});
+                                  new String[]{"hostname"},
+                                  new String[]{"describe", "show-classes", 
+                                               "export", "available-cms",
+                                               "snapshot", "test", "query"});
         } catch (Exception ex) {
             System.err.println("Error: " + ex.getLocalizedMessage());
             System.exit(0);
@@ -448,8 +463,10 @@ public class CIMClientLib {
                 cimclient.doInspectObjects(params.get("describe"));
             } else if (params.containsKey("show-classes")) {
                 cimclient.doEnumerateClasses();
+            } else if (params.containsKey("query")) {
+                cimclient.doQuery(params.get("query")[0]);
             } else if (params.containsKey("test")) {
-                cimclient.doCompound(params.get("test")[0]);
+                cimclient.enumClassInstances(params.get("test")[0]);
             } else {
                 CIMClientLib.usage();
                 System.err.println("Error:\n\tWrong parameters.");

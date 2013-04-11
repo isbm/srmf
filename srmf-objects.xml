@@ -2,10 +2,11 @@
 <objects>
   <object id="process-list" path="root/cimv2:CIM_Process" title="List of processes"/>
   <object id="computer-system" path="root/cimv2:CIM_ComputerSystem" title="Computer system" />
-  <object id="something-crazy" path="root/cimv2" title="Some queried object">
+  <object id="installed-packages" path="root/test" title="Get all installed software components">
     <query>
       <![CDATA[
-         SELECT Name, PrimaryOwnerContact, PrimaryOwnerName FROM CIM_ComputerSystem
+          SELECT InstanceID, Name, Summary, Description, Version, Release, Architecture 
+            FROM RCP_UnixSoftwareIdentity
       ]]>
     </query>
   </object>

@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <object-map>
-  <destination name="cfengine-3" title="CFengine v.3 configuration management system">
-    <ref id="process-list" render="cim-process-cfengine3"/>
+  <destination name="puppet" title="Puppet">
+    <ref id="installed-packages" render="cim-installed-packages-pupppet"/>        
   </destination>
+  <destination name="cfengine-3" title="CFengine v.3 configuration management system" />
   <destination name="text" title="ASCII plain text">
     <ref id="process-list" render="cim-process-text"/>
   </destination>
