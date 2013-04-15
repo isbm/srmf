@@ -1,15 +1,21 @@
-When the same source can output different purposes, srmf-map.conf should be this way:
--------------------------------------------------------------------------------------
-<?xml version="1.0" encoding="utf-8" ?>
-<object-map>
-  <destination name="chef" title="Dell's Chef">
-    <ref id="http-service">
-      <render id="cim-http-service-chef" out="http-service-chef-install.rb">
-      <render id="cim-http-service-chef" out="http-service-chef-remove.rb">
-      <render id="cim-http-service-chef" out="http-service-chef-solo.json">
-    </ref>
-  </destination>
-</object-map>
+Target platform
+---------------
+
+- RPM packages
+- openSUSE 12.3 or SLES 11 SP2
+- 32, 64 bit
+
+
+Robustness
+----------
+
+Show origin of error messages
+
+
+Host config
+-----------
+
+<scheme>://<user>:<pass>@<host>:<port>/<cim>/<namespace>
 
 
 Building block principle
@@ -25,7 +31,18 @@ Building block principle
   srmf --host foo --describe http_service,firewall
 
 
-Host config
------------
 
-<scheme>://<user>:<pass>@<host>:<port>/<cim>/<namespace>
+When the same source can output different purposes, srmf-map.conf should be this way:
+-------------------------------------------------------------------------------------
+<?xml version="1.0" encoding="utf-8" ?>
+<object-map>
+  <destination name="chef" title="Dell's Chef">
+    <ref id="http-service">
+      <render id="cim-http-service-chef" out="http-service-chef-install.rb">
+      <render id="cim-http-service-chef" out="http-service-chef-remove.rb">
+      <render id="cim-http-service-chef" out="http-service-chef-solo.json">
+    </ref>
+  </destination>
+</object-map>
+
+
