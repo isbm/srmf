@@ -125,7 +125,7 @@ public class CIMClientLib {
      * @param location
      * @throws Exception 
      */
-    public CIMClientLib(String hostname, Properties setup) throws Exception {
+    public CIMClientLib(String hostname, SRMFConfig setup) throws Exception {
         // Install XML sniffer
         CIMXMLTraceListener xmlListener = new CIMXMLTraceListener() {
             @Override
@@ -169,28 +169,25 @@ public class CIMClientLib {
         LogAndTraceBroker.getBroker().addCIMXMLTraceListener(xmlListener);
 
         // Local storage
-        this.localStorage = new SRMFLocalStorage(new File(setup.getProperty(".srmf.manifest.path", SRMFLocalStorage.DEFAULT_STORAGE_PATH)),
-                                                 setup.getProperty(".srmf.manifest.compression", "enabled").toLowerCase().equals("enabled"));
+        this.localStorage = new SRMFLocalStorage(new File(setup.getItem(".srmf.manifest.path", SRMFLocalStorage.DEFAULT_STORAGE_PATH)),
+                                                 setup.getItem(".srmf.manifest.compression", "enabled").toLowerCase().equals("enabled"));
 
         // Render map
-        this.exportSRMFRenderMap = new SRMFRenderMap(new File(setup.getProperty(".srmf.manifest.renderers",
-                                                                                SRMFRenderMap.DEFAUILT_SRMF_RENDER_PATH)));
+        this.exportSRMFRenderMap = new SRMFRenderMap(new File(setup.getItem(".srmf.manifest.renderers",
+                                                                            SRMFRenderMap.DEFAUILT_SRMF_RENDER_PATH)));
         File srmfMap = new File(String.format("%s/%s", CIMClientLib.SRMF_UNIX_DEFAULT_CONF_PATH, CIMClientLib.SRMF_MAP_FILE));
         File srmfObjects = new File(String.format("%s/%s", CIMClientLib.SRMF_UNIX_DEFAULT_CONF_PATH, CIMClientLib.SRMF_OBJ_FILE));
         this.exportSRMFRenderMap.loadFromFile(srmfMap.exists() ? srmfMap : new File(CIMClientLib.SRMF_MAP_FILE),
                                               srmfObjects.exists() ? srmfObjects : new File(CIMClientLib.SRMF_OBJ_FILE));
 
         // CIM Client
-        URL location = new URL(String.format("%s://%s:%s", 
-                                             setup.getProperty(hostname + "/proto").toLowerCase(),
-                                             hostname.toLowerCase(),
-                                             setup.getProperty(hostname + "/port")));
+        URL location = setup.getConnectionUrl(hostname);
         this.client = WBEMClientFactory.getClient(WBEMClientConstants.PROTOCOL_CIMXML);
         CIMObjectPath path = new CIMObjectPath(location.getProtocol(),
                 location.getHost(), String.valueOf(location.getPort()), null, null, null);
         Subject subj = new Subject();
-        subj.getPrincipals().add(new UserPrincipal(setup.getProperty(hostname + "/user")));
-        subj.getPrivateCredentials().add(new PasswordCredential(setup.getProperty(hostname + "/password")));
+        subj.getPrincipals().add(new UserPrincipal(setup.getUsername(hostname)));
+        subj.getPrivateCredentials().add(new PasswordCredential(setup.getPassword(hostname)));
         this.client.initialize(path, subj, new Locale[]{Locale.US});
     }
 
@@ -441,6 +438,7 @@ public class CIMClientLib {
             CIMClientLib.usage();
         }
 
+        /*
         File setupFile = new File(params.get("config") != null ? params.get("config")[0] : "/etc/srmf.conf");
         if (!setupFile.exists()) {
             try {
@@ -469,10 +467,12 @@ public class CIMClientLib {
             System.err.println("Error loading configuration: " + ex.getLocalizedMessage());
             System.exit(0);
         }
+        */
 
         // Run! :)
         try {
-            CIMClientLib cimclient = new CIMClientLib(params.get("hostname")[0], setup);
+            CIMClientLib cimclient = new CIMClientLib(params.get("hostname")[0], 
+                                                      new SRMFConfig(params.get("config") != null ? params.get("config")[0] : null));
             cimclient.setNamespace(params.get("namespace")[0]);
             
             if (params.containsKey("snapshot")) {
