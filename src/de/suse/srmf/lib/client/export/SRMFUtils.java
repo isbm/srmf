@@ -32,9 +32,14 @@ package de.suse.srmf.lib.client.export;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.StringReader;
 import java.io.StringWriter;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -48,6 +53,149 @@ import javax.xml.transform.stream.StreamSource;
 import org.w3c.dom.Document;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
+
+
+
+/**
+ * Prints ASCII table.
+ * 
+ * @author bo
+ */
+class CLITablePrint {
+    private List<List> table;
+    private int [] widths;
+
+    /**
+     * Constructor.
+     * 
+     * @param table 
+     */
+    public CLITablePrint(List<List> table) {
+        this.table = table;
+    }
+
+    /**
+     * Check if the table is consistent grid.
+     * Header is a leader line.
+     */
+    private void check() throws Exception {
+        if (this.table == null) {
+            this.table = new ArrayList<List>();
+        }
+        
+        if (this.table.isEmpty()) {
+            throw new Exception("Table cannot be empty!");
+        }
+        
+        int header = 0;
+        for (int i = 0; i < table.size(); i++) {
+            header = table.get(i).size();
+            if (table.get(i).size() != header) {
+                throw new Exception("Data in table is not equally distributed!");
+            }
+        }
+    }
+
+
+    /**
+     * Find extra-widths by my width of any value.
+     */
+    private void getWidths() {
+        this.widths = new int[this.table.get(0).size()];
+        int cellLen = 0;
+        for (int i = 0; i < this.table.size(); i++) {
+            List row = this.table.get(i);
+            for (int idx = 0; idx < row.size(); idx++) {
+                cellLen = row.get(idx).toString().length();
+                if (cellLen > this.widths[idx]) {
+                    this.widths[idx] = cellLen;
+                }
+            }
+        }
+    }
+
+
+    /**
+     * Format the table render on the CLI.
+     * 
+     * @return 
+     */
+    private String format() {
+        StringBuilder out = new StringBuilder();
+        List<List> ftable = new ArrayList<List>();
+        for (int i = 0; i < this.table.size(); i++) {
+            List row = this.table.get(i);
+            List<String> frow = new ArrayList<String>();
+            for (int idx = 0; idx < widths.length; idx++) {
+                String data = row.get(idx) + this.makeWS(this.widths[idx] - row.get(idx).toString().length(), " ");
+                frow.add(data);
+            }
+            ftable.add(frow);
+        }
+
+        List<String> strips = new ArrayList<String>();
+        for (int idx = 0; idx < ftable.size(); idx++) {
+            strips.clear();
+            List<String> row = ftable.get(idx);
+            for (int i = 0; i < row.size(); i++) {
+                strips.add(this.makeWS(row.get(i).length(), idx == 1 ? "=" : "-"));
+            }
+        
+            out.append(this.join(idx == 1 ? "===" : "-+-", strips)).append("\n").append(this.join(" | ", row)).append("\n");
+        }
+
+        out.append(this.join("-+-", strips)).append("\n");
+
+        return out.toString();
+    }
+
+
+    @Override
+    public String toString() {
+        try {
+            this.check();
+            this.getWidths();
+            return this.format();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return "#ERROR: " + ex.getLocalizedMessage();
+        }
+    }
+    
+    /**
+     * Equivalent to "foo".join(array) in Python.
+     * 
+     * @param delimeter
+     * @param data
+     * @return 
+     */
+    private String join(String delimiter, Collection<?> data) {
+        StringBuilder out = new StringBuilder();
+        Iterator iter = data.iterator();
+        while (iter.hasNext()) {
+            out.append(iter.next());
+            if (!iter.hasNext()) {
+                break;
+            }
+            out.append(delimiter);
+        }
+
+        return out.toString();
+    }
+    
+
+    private String makeWS(int times, String wsc) {
+        if (wsc == null) {
+            wsc = " ";
+        }
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < times; i++) {
+            out.append(wsc);
+        }
+
+        return out.toString();
+    }
+}
 
 /**
  *
@@ -173,5 +321,14 @@ public class SRMFUtils {
             }
         }
         return params;
+    }
+    
+    
+    public static void printTable(List<List> table, PrintStream stream) {
+        if (stream == null) {
+            stream = System.out;
+        }
+
+        stream.println(new CLITablePrint(table));
     }
 }

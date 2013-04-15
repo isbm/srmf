@@ -41,6 +41,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -259,11 +260,21 @@ public class CIMClientLib {
             throw new Exception("Error: No destinatination export renders are available.");
         }
 
-        System.err.println("ID\tTitle");
+        List<List> table = new ArrayList<List>();
+        List<String> header = new ArrayList<String>();
+        header.add("ID");
+        header.add("Title");
+        table.add(header);
+        
         for (int i = 0; i < renderIds.size(); i++) {
             SRMFRenderMap.SRMFMapDestination destination = renderIds.get(i);
-            System.err.println(String.format("%s\t%s", destination.getName(), destination.getTitle()));
+            List<String> row = new ArrayList<String>();
+            row.add(destination.getName());
+            row.add(destination.getTitle());
+            table.add(row);
         }
+        
+        SRMFUtils.printTable(table, System.out);
     }
 
 
@@ -384,7 +395,7 @@ public class CIMClientLib {
         System.err.println("\t--describe=<Object,Object...>\tDescribe an array of objects (or just one).");
         System.err.println("\t--namespace=<value>\t\tNamespace on the target machine.");
         System.err.println("\t--export=<value>\t\tExport for deployment with particular CMS.");
-        System.err.println("\t--query={...}\t\tWQL query block.");
+        System.err.println("\t--query={...}\t\t\tWQL query block.");
         System.err.println("\t--snapshot\t\t\tSnapshot current service manifest.");
         System.err.println("\t--available-cms\t\t\tList of supported CMS.");
         System.err.println("\t--help\t\t\t\tThis help text.\n");
@@ -400,7 +411,7 @@ public class CIMClientLib {
     public static void main(String[] args) {
         Map<String, String[]> params = null;
         try {
-            params = SRMFUtils.getArgs(args, "show-classes", "available-cms", "snapshot");
+            params = SRMFUtils.getArgs(args, "show-classes", "available-cms", "snapshot", "help");
         } catch (Exception ex) {
             System.err.println("Error: " + ex.getLocalizedMessage());
             System.exit(0);
@@ -423,6 +434,10 @@ public class CIMClientLib {
         
         if (!params.containsKey("namespace")) {
             params.put("namespace", new String[]{"root/cimv2"});
+        }
+        
+        if (params.containsKey("help")) {
+            CIMClientLib.usage();
         }
 
         File setupFile = new File(params.get("config") != null ? params.get("config")[0] : "/etc/srmf.conf");
