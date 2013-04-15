@@ -11,3 +11,21 @@ When the same source can output different purposes, srmf-map.conf should be this
   </destination>
 </object-map>
 
+
+Building block principle
+------------------------
+
+- descriptions/<name>.xml describe how to discover <name> (i.e. http
+  service, all software, ssh config, firewall, ...)
+
+- Ability to mix/match/plug these descriptions via i.e. <include> tags.
+
+- Ability to name description file(s) on the command line, like
+  srmf --host foo --describe http_service
+  srmf --host foo --describe http_service,firewall
+
+
+Host config
+-----------
+
+<scheme>://<user>:<pass>@<host>:<port>/<cim>/<namespace>
