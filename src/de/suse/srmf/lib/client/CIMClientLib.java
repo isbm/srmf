@@ -398,6 +398,7 @@ public class CIMClientLib {
         System.err.println("\t--query={...}\t\t\tWQL query block.");
         System.err.println("\t--snapshot\t\t\tSnapshot current service manifest.");
         System.err.println("\t--available-cms\t\t\tList of supported CMS.");
+        System.err.println("\t--trace\t\t\t\tShow extended tracebacks of errors.\n");
         System.err.println("\t--help\t\t\t\tThis help text.\n");
         // --test    Anything for trying something :-)
         System.exit(0);
@@ -411,7 +412,7 @@ public class CIMClientLib {
     public static void main(String[] args) {
         Map<String, String[]> params = null;
         try {
-            params = SRMFUtils.getArgs(args, "show-classes", "available-cms", "snapshot", "help");
+            params = SRMFUtils.getArgs(args, "show-classes", "available-cms", "snapshot", "help", "trace");
         } catch (Exception ex) {
             System.err.println("Error: " + ex.getLocalizedMessage());
             System.exit(0);
@@ -445,7 +446,9 @@ public class CIMClientLib {
             try {
                 System.err.println(String.format("Warning: %s does not exists. Using default in current directly.", setupFile.getCanonicalPath()));
             } catch (IOException ex) {
-                Logger.getLogger(CIMClientLib.class.getName()).log(Level.SEVERE, null, ex);
+                if (params.containsKey("trace")) {
+                    Logger.getLogger(CIMClientLib.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
             setupFile = new File("srmf.conf");
         }
@@ -459,6 +462,10 @@ public class CIMClientLib {
         try {
             setup.load(new FileInputStream(setupFile));
         } catch (IOException ex) {
+            if (params.containsKey("trace")) {
+                Logger.getLogger(CIMClientLib.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
             System.err.println("Error loading configuration: " + ex.getLocalizedMessage());
             System.exit(0);
         }
@@ -487,7 +494,10 @@ public class CIMClientLib {
                 System.err.println("Error:\n\tWrong parameters.");
             }
         } catch (Exception ex) {
-            //ex.printStackTrace();
+            if (params.containsKey("trace")) {
+                Logger.getLogger(CIMClientLib.class.getName()).log(Level.SEVERE, null, ex);
+            }
+
             System.err.println("Error: " + ex.getLocalizedMessage());
         }
     }
