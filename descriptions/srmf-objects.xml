@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<objects>
+  <object id="process-list" path="root/cimv2:CIM_Process" title="List of processes"/>
+  <object id="computer-system" path="root/cimv2:CIM_ComputerSystem" title="Computer system" />
+  <object id="installed-packages" path="root/test" title="Get all installed software components">
+    <query>
+      <![CDATA[
+          SELECT InstanceID, Name, Summary, Description, Version, Release, Architecture 
+            FROM RCP_UnixSoftwareIdentity
+      ]]>
+    </query>
+  </object>
+</objects>
