@@ -34,6 +34,7 @@ package de.suse.srmf.lib.client.export;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -214,12 +215,12 @@ public class SRMFRenderMap {
      * 
      * @param mapping 
      */
-    public void loadFromFile(File mapping, File providers)
+    public void loadFromFile(File mapping, URL providers)
             throws IOException,
                    ParserConfigurationException,
                    SAXException,
                    Exception {
-        this.init(SRMFUtils.getXMLDocumentFromFile(mapping), SRMFUtils.getXMLDocumentFromFile(providers));
+        this.init(SRMFUtils.getXMLDocumentFromFile(mapping), providers);
     }
 
 
@@ -228,9 +229,10 @@ public class SRMFRenderMap {
      * 
      * @param doc 
      */
-    private void init(Document mapping, Document providers) throws Exception {
+    private void init(Document mapping, URL providers) throws Exception {
         // Load providers
-        this.rproviders.clear();
+        this.rproviders = new SRMFRenderMapResolver(providers).getProviders();
+        /*
         NodeList objectsNodeList = providers.getElementsByTagName("object");
         for (int i = 0; i < objectsNodeList.getLength(); i++) {
             Element objElement = (Element) objectsNodeList.item(i);
@@ -240,6 +242,7 @@ public class SRMFRenderMap {
                                                            this.getQuery(objElement));
             this.rproviders.put(provider.getId(), provider);
         }
+        */
         
         // Load mapping
         this.rmap.clear();

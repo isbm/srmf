@@ -35,17 +35,16 @@ package de.suse.srmf.lib.client;
 import de.suse.srmf.lib.client.export.SRMFLocalStorage;
 import de.suse.srmf.lib.client.export.SRMFMessage;
 import de.suse.srmf.lib.client.export.SRMFRenderMap;
+import de.suse.srmf.lib.client.export.SRMFRenderMapResolver;
 import de.suse.srmf.lib.client.export.SRMFStorage;
 import de.suse.srmf.lib.client.export.SRMFUtils;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.cim.CIMInstance;
@@ -107,7 +106,7 @@ class SRMFMessageMeta {
  */
 public class CIMClientLib {
     public static final String SRMF_MAP_FILE = "srmf-map.xml";
-    public static final String SRMF_OBJ_FILE = "srmf-objects.xml";
+    public static final String SRMF_OBJ_FILE = "srmf-index.xml";
     public static final String SRMF_UNIX_DEFAULT_CONF_PATH = "/etc/srmf/conf";
 
     private WBEMClient client;
@@ -125,7 +124,7 @@ public class CIMClientLib {
      * @param location
      * @throws Exception 
      */
-    public CIMClientLib(String hostname, SRMFConfig setup) throws Exception {
+    public CIMClientLib(String hostname, SRMFConfig setup, URL optionalIndex) throws Exception {
         // Install XML sniffer
         CIMXMLTraceListener xmlListener = new CIMXMLTraceListener() {
             @Override
@@ -175,10 +174,8 @@ public class CIMClientLib {
         // Render map
         this.exportSRMFRenderMap = new SRMFRenderMap(new File(setup.getItem(".srmf.manifest.renderers",
                                                                             SRMFRenderMap.DEFAUILT_SRMF_RENDER_PATH)));
-        File srmfMap = new File(String.format("%s/%s", CIMClientLib.SRMF_UNIX_DEFAULT_CONF_PATH, CIMClientLib.SRMF_MAP_FILE));
-        File srmfObjects = new File(String.format("%s/%s", CIMClientLib.SRMF_UNIX_DEFAULT_CONF_PATH, CIMClientLib.SRMF_OBJ_FILE));
-        this.exportSRMFRenderMap.loadFromFile(srmfMap.exists() ? srmfMap : new File(CIMClientLib.SRMF_MAP_FILE),
-                                              srmfObjects.exists() ? srmfObjects : new File(CIMClientLib.SRMF_OBJ_FILE));
+        File srmfMap = new File(String.format("%s/%s", SRMFRenderMapResolver.SRMF_MANIFEST_PATH, CIMClientLib.SRMF_MAP_FILE));
+        this.exportSRMFRenderMap.loadFromFile(srmfMap.exists() ? srmfMap : new File(CIMClientLib.SRMF_MAP_FILE), optionalIndex);
 
         // CIM Client
         URL location = setup.getConnectionUrl(hostname);
@@ -395,6 +392,7 @@ public class CIMClientLib {
         System.err.println("\t--query={...}\t\t\tWQL query block.");
         System.err.println("\t--snapshot\t\t\tSnapshot current service manifest.");
         System.err.println("\t--available-cms\t\t\tList of supported CMS.");
+        System.err.println("\t--index-url\t\t\tPass custom index URL.");
         System.err.println("\t--trace\t\t\t\tShow extended tracebacks of errors.\n");
         System.err.println("\t--help\t\t\t\tThis help text.\n");
         // --test    Anything for trying something :-)
@@ -438,41 +436,11 @@ public class CIMClientLib {
             CIMClientLib.usage();
         }
 
-        /*
-        File setupFile = new File(params.get("config") != null ? params.get("config")[0] : "/etc/srmf.conf");
-        if (!setupFile.exists()) {
-            try {
-                System.err.println(String.format("Warning: %s does not exists. Using default in current directly.", setupFile.getCanonicalPath()));
-            } catch (IOException ex) {
-                if (params.containsKey("trace")) {
-                    Logger.getLogger(CIMClientLib.class.getName()).log(Level.SEVERE, null, ex);
-                }
-            }
-            setupFile = new File("srmf.conf");
-        }
-
-        if (!setupFile.exists()) {
-            System.err.println(String.format("Error: file %s does not exists!", setupFile.getAbsolutePath()));
-            System.exit(0);
-        }
-        
-        Properties setup = new Properties();
-        try {
-            setup.load(new FileInputStream(setupFile));
-        } catch (IOException ex) {
-            if (params.containsKey("trace")) {
-                Logger.getLogger(CIMClientLib.class.getName()).log(Level.SEVERE, null, ex);
-            }
-
-            System.err.println("Error loading configuration: " + ex.getLocalizedMessage());
-            System.exit(0);
-        }
-        */
-
         // Run! :)
         try {
             CIMClientLib cimclient = new CIMClientLib(params.get("hostname")[0], 
-                                                      new SRMFConfig(params.get("config") != null ? params.get("config")[0] : null));
+                                                      new SRMFConfig(params.get("config") != null ? params.get("config")[0] : null),
+                                                      params.get("index-url") != null ? new URL(params.get("index-url")[0]) : null);
             cimclient.setNamespace(params.get("namespace")[0]);
             
             if (params.containsKey("snapshot")) {
