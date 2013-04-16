@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<objects>
+  <include url="file:///etc/srmf/manifest/info/computer-system.xml" />
+  <object id="process-list" path="root/cimv2:CIM_Process" title="List of processes"/>
+</objects>
