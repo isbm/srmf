@@ -39,7 +39,6 @@ import de.suse.srmf.lib.client.export.SRMFRenderMapResolver;
 import de.suse.srmf.lib.client.export.SRMFStorage;
 import de.suse.srmf.lib.client.export.SRMFUtils;
 import java.io.File;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -114,7 +113,7 @@ public class CIMClientLib {
     private boolean traceMode;
     private SRMFStorage localStorage;
     private SRMFRenderMap exportSRMFRenderMap;
-    private String currentSRMFMapRefID;
+    private List<SRMFRenderMap.SRMFMapDestination.SRMFMapRef.SRMFRender> currentSRMFMapRefID;
     private SRMFMessageMeta currentSRMFMessageMeta;
 
 
@@ -135,8 +134,11 @@ public class CIMClientLib {
                     // Render
                     if (CIMClientLib.this.currentSRMFMapRefID != null) {
                         try {
-                            System.err.println(SRMFUtils.xproc(SRMFUtils.getXMLDocumentFromString(message),
-                                                               CIMClientLib.this.exportSRMFRenderMap.getRenderingStyle(CIMClientLib.this.currentSRMFMapRefID)));
+                            for (int i = 0; i < CIMClientLib.this.currentSRMFMapRefID.size(); i++) {
+                                SRMFRenderMap.SRMFMapDestination.SRMFMapRef.SRMFRender sRMFRender = CIMClientLib.this.currentSRMFMapRefID.get(i);
+                                System.err.println(SRMFUtils.xproc(SRMFUtils.getXMLDocumentFromString(message),
+                                                                   CIMClientLib.this.exportSRMFRenderMap.getRenderingStyle(sRMFRender.getRender()))); // XXX: Files!
+                            }
                             CIMClientLib.this.currentSRMFMapRefID = null;
                         } catch (Exception ex) {
                             Logger.getLogger(CIMClientLib.class.getName()).log(Level.SEVERE, null, ex);
@@ -319,7 +321,7 @@ public class CIMClientLib {
             SRMFRenderMap.SRMFMapDestination.SRMFMapRef sRMFMapRef = references.get(i);
             SRMFRenderMap.SRMFMapProvider sRMFMapProvider = this.exportSRMFRenderMap.getProviderByID(sRMFMapRef.getId());
             try {
-                this.currentSRMFMapRefID = sRMFMapRef.getRender();
+                this.currentSRMFMapRefID = sRMFMapRef.getRenderers();
                 CloseableIterator<CIMInstance> it = client.execQuery(new CIMObjectPath(null, null, null, sRMFMapProvider.getNamespace(), "", null),
                                                                      sRMFMapProvider.getQuery(), "WQL");
             } catch (Exception ex) {

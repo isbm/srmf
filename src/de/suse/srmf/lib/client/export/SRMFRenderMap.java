@@ -129,20 +129,78 @@ public class SRMFRenderMap {
          * Map rendering reference
          */
         public static class SRMFMapRef {
-            private String render;
-            private String id;
+            
+            /**
+             * Rendering action: XSL to output
+             */
+            public static class SRMFRender {
+                private String render;
+                private String outFilename;
 
-            public SRMFMapRef(String id, String render) {
-                this.id = id;
-                this.render = render;
+                /**
+                 * Constructor.
+                 * 
+                 * @param render
+                 * @param outFilename 
+                 */
+                public SRMFRender(String render, String outFilename) {
+                    this.render = render;
+                    this.outFilename = outFilename;
+                }
+
+                /**
+                 * Filename that needs to be generated with this particular action.
+                 * The full path is calculated by the outsite facility.
+                 * 
+                 * @return 
+                 */
+                public String getOutFilename() {
+                    return outFilename;
+                }
+
+                /**
+                 * Returns the ID of the XSL file on the system to render the XML output.
+                 * @return 
+                 */
+                public String getRender() {
+                    return render;
+                }
             }
 
+            private String id;
+            private List<SRMFRender> renderers;
+
+            /**
+             * Constructor.
+             * 
+             * @param id 
+             */
+            public SRMFMapRef(String id) {
+                this.id = id;
+                this.renderers = new ArrayList<SRMFRender>();
+            }
+
+            /**
+             * Get ID of the destination.
+             * 
+             * @return 
+             */
             public String getId() {
                 return id;
             }
+            
+            public SRMFMapRef addRender(SRMFRender render) {
+                this.renderers.add(render);
+                return this;
+            }
 
-            public String getRender() {
-                return render;
+
+            /**
+             * Get available renderers.
+             * @return 
+             */
+            public List<SRMFRender> getRenderers() {
+                return Collections.unmodifiableList(this.renderers);
             }
         }
         
@@ -243,8 +301,13 @@ public class SRMFRenderMap {
             NodeList refNodeList = destElement.getElementsByTagName("ref");
             for (int j = 0; j < refNodeList.getLength(); j++) {
                 Element refElement = (Element) refNodeList.item(j);
-                destination.addReference(new SRMFMapDestination.SRMFMapRef(refElement.getAttribute("id"),
-                                                                           refElement.getAttribute("render")));
+                NodeList renderNodeList = refElement.getElementsByTagName("render");
+                SRMFMapDestination.SRMFMapRef reference = new SRMFMapDestination.SRMFMapRef(refElement.getAttribute("id"));
+                for (int k = 0; k < renderNodeList.getLength(); k++) {
+                    Element renderElement = (Element) renderNodeList.item(k);
+                    reference.addRender(new SRMFMapDestination.SRMFMapRef.SRMFRender(renderElement.getAttribute("id"), renderElement.getAttribute("out")));
+                }
+                destination.addReference(reference);
             }
             this.rmap.add(destination);
         }
