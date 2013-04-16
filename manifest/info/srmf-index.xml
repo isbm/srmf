@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<objects>
+  <include url="file:///etc/srmf/manifest/info/http.xml" />
+  <object id="installed-packages" path="root/test" title="Get all installed software components">
+    <query>
+      <![CDATA[
+          SELECT InstanceID, Name, Summary, Description, Version, Release, Architecture 
+            FROM RCP_UnixSoftwareIdentity
+      ]]>
+    </query>
+  </object>
+</objects>
