@@ -840,7 +840,6 @@ is divided into following sections:
                 <copylibs compress="${jar.compress}" index="${jar.index}" indexMetaInf="${jar.index.metainf}" jarfile="${dist.jar}" manifest="@{manifest}" rebase="${copylibs.rebase}" runtimeclasspath="${run.classpath.without.build.classes.dir}">
                     <fileset dir="${build.classes.dir}"/>
                     <manifest>
-                        <attribute name="Class-Path" value="${jar.classpath}"/>
                         <customize/>
                     </manifest>
                 </copylibs>
