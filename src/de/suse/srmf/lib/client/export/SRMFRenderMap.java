@@ -232,17 +232,6 @@ public class SRMFRenderMap {
     private void init(Document mapping, URL providers) throws Exception {
         // Load providers
         this.rproviders = new SRMFRenderMapResolver(providers).getProviders();
-        /*
-        NodeList objectsNodeList = providers.getElementsByTagName("object");
-        for (int i = 0; i < objectsNodeList.getLength(); i++) {
-            Element objElement = (Element) objectsNodeList.item(i);
-            SRMFMapProvider provider = new SRMFMapProvider(objElement.getAttribute("path"), 
-                                                           objElement.getAttribute("id"),
-                                                           objElement.getAttribute("title"),
-                                                           this.getQuery(objElement));
-            this.rproviders.put(provider.getId(), provider);
-        }
-        */
         
         // Load mapping
         this.rmap.clear();

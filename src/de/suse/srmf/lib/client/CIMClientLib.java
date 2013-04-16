@@ -216,7 +216,7 @@ public class CIMClientLib {
         this.traceMode = true;
         for (String objName : objects) {
             try {
-                CloseableIterator<CIMInstance> it = client.execQuery(new CIMObjectPath("", this.namespace),
+                CloseableIterator<CIMInstance> it = client.execQuery(new CIMObjectPath(null, null, null, this.namespace, "", null),
                                                                      "select * from " + objName, "WQL");
                 while (it.hasNext()){
                     CIMInstance instance = it.next();
@@ -237,7 +237,7 @@ public class CIMClientLib {
      * @param namespace 
      */
     public void doEnumerateClasses() throws WBEMException {
-        CIMObjectPath rootPath = new CIMObjectPath("", this.namespace);
+        CIMObjectPath rootPath = new CIMObjectPath(null, null, null, this.namespace, "", null);
         CloseableIterator<CIMObjectPath> cimpathIterator = this.client.enumerateClassNames(rootPath, true);
         while (cimpathIterator.hasNext()) {
             CIMObjectPath objectPath = cimpathIterator.next();
@@ -286,7 +286,7 @@ public class CIMClientLib {
                                                               sRMFMapProvider.getObjectClass(), // XXX: Traverse base class in the future.
                                                               sRMFMapProvider.getObjectClass(),
                                                               sRMFMapProvider.getNamespace());
-            client.execQuery(new CIMObjectPath("", sRMFMapProvider.getNamespace()), sRMFMapProvider.getQuery(), "WQL");
+            client.execQuery(new CIMObjectPath(null, null, null, sRMFMapProvider.getNamespace(), "", null), sRMFMapProvider.getQuery(), "WQL");
         }
         this.traceMode = false;
     }
@@ -320,7 +320,7 @@ public class CIMClientLib {
             SRMFRenderMap.SRMFMapProvider sRMFMapProvider = this.exportSRMFRenderMap.getProviderByID(sRMFMapRef.getId());
             try {
                 this.currentSRMFMapRefID = sRMFMapRef.getRender();
-                CloseableIterator<CIMInstance> it = client.execQuery(new CIMObjectPath("", sRMFMapProvider.getNamespace()),
+                CloseableIterator<CIMInstance> it = client.execQuery(new CIMObjectPath(null, null, null, sRMFMapProvider.getNamespace(), "", null),
                                                                      sRMFMapProvider.getQuery(), "WQL");
             } catch (Exception ex) {
                 System.err.println(String.format("Failed to render \"%s\" provider for %s!", sRMFMapProvider.getId(), dst.getTitle()));
@@ -338,7 +338,7 @@ public class CIMClientLib {
     public void doQuery(String query) {
         this.traceMode = true;
         try {
-            client.execQuery(new CIMObjectPath("", this.namespace), query, "WQL");
+            client.execQuery(new CIMObjectPath(null, null, null, this.namespace, "", null), query, "WQL");
         } catch (Exception ex) {
             System.err.println(String.format(">>> Failed to process \"%s\" query!", query));
         }
@@ -354,11 +354,11 @@ public class CIMClientLib {
     public void enumClassInstances(String className) {
         try {
             this.traceMode = true;
-            CloseableIterator<CIMInstance> it = this.client.enumerateInstances(new CIMObjectPath(className, this.namespace), true, false, true, null);
+            CloseableIterator<CIMInstance> it = this.client.enumerateInstances(new CIMObjectPath(null, null, null, this.namespace, className, null), true, false, true, null);
                 //while (it.hasNext()){
                 //    System.out.println(it.next());
                 //}        
-                it.close();
+                //it.close();
         } catch (WBEMException ex) {
             Logger.getLogger(CIMClientLib.class.getName()).log(Level.SEVERE, null, ex);
         }

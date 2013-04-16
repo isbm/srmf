@@ -4,9 +4,9 @@ When the same source can output different purposes, srmf-map.conf should be this
 <object-map>
   <destination name="chef" title="Dell's Chef">
     <ref id="http-service">
-      <render id="cim-http-service-chef" out="http-service-chef-install.rb">
-      <render id="cim-http-service-chef" out="http-service-chef-remove.rb">
-      <render id="cim-http-service-chef" out="http-service-chef-solo.json">
+      <render id="cim-http-service-install-chef" out="http-service-chef-install.rb">
+      <render id="cim-http-service-remove-chef" out="http-service-chef-remove.rb">
+      <render id="cim-http-service-chef-json-chef" out="http-service-chef-solo.json">
     </ref>
   </destination>
 </object-map>
