@@ -1,0 +1,22 @@
+Dev environment for openSUSE 12.3
+---------------------------------
+
+Packages:
+   java-1_7_0-openjdk-devel
+   ant
+   git
+   sblim-cim-client2
+   sblim-cim-client2-javadoc
+   sblim-cim-client2-manual
+
+Tarballs:
+   http://download.netbeans.org/netbeans/7.3/final/bundles/netbeans-7.3-javase-linux.sh
+ 
+
+Fix NetBeans's build XML for packaging:
+   In nbproject/build-impl.xml remove the line:
+   <attribute name="Class-Path" value="${jar.classpath}"/>
+
+Symlink the SRMF directory:
+   sudo mkdir /etc/srmf
+   sudo ln -s $YOUR_PROJECTS/manifest /etc/srmf
