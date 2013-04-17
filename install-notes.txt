@@ -20,3 +20,4 @@ Fix NetBeans's build XML for packaging:
 Symlink the SRMF directory:
    sudo mkdir /etc/srmf
    sudo ln -s $YOUR_PROJECTS/manifest /etc/srmf
+   sudo ln -s $YOUR_PROJECTS/renderers /etc/srmf/export

@@ -1,17 +1,20 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <object-map>
-    <destination name="puppet" title="Puppet">
-        <ref id="installed-packages">
-            <render id="cim-installed-packages-pupppet" out="file:http-service-chef-install.rb" />
-            <render id="cim-installed-packages-pupppet" out="file:http-service-chef-remove.rb" />
-            <render id="cim-installed-packages-pupppet" out="file:http-service-chef-solo.json" />
-        </ref>
-    </destination>
-    <destination name="cfengine-3" title="CFengine v.3 configuration management system" />
-    <destination name="text" title="ASCII plain text">
-        <ref id="process-list" render="cim-process-text">
-            <render id="cim-process-text" out="console:stdout"/>
-        </ref>
-    </destination>
+  <destination name="puppet" title="Puppet">
+    <ref id="installed-packages">
+      <render id="cim-installed-packages-pupppet" out="file:http-service-chef-install.rb" />
+      <render id="cim-installed-packages-pupppet" out="file:http-service-chef-remove.rb" />
+      <render id="cim-installed-packages-pupppet" out="file:http-service-chef-solo.json" />
+    </ref>
+  </destination>
+  <destination name="cfengine-3" title="CFengine v.3 configuration management system">
+    <ref id="installed-packages">
+    </ref>
+  </destination>
+  <destination name="text" title="ASCII plain text">
+    <ref id="process-list" render="cim-process-text">
+      <render id="cim-process-text" out="console:stdout"/>
+    </ref>
+  </destination>
 </object-map>
 

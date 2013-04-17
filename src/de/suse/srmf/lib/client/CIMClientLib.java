@@ -32,6 +32,8 @@
 
 package de.suse.srmf.lib.client;
 
+import de.suse.srmf.lib.client.export.ExportDispatcher;
+import de.suse.srmf.lib.client.export.RichArrayList;
 import de.suse.srmf.lib.client.export.SRMFLocalStorage;
 import de.suse.srmf.lib.client.export.SRMFMessage;
 import de.suse.srmf.lib.client.export.SRMFRenderMap;
@@ -109,6 +111,8 @@ public class CIMClientLib {
     public static final String SRMF_UNIX_DEFAULT_CONF_PATH = "/etc/srmf/conf";
 
     private WBEMClient client;
+    private String targetSystemHostname;
+    private SRMFConfig setup;
     private String namespace;
     private boolean traceMode;
     private SRMFStorage localStorage;
@@ -123,7 +127,9 @@ public class CIMClientLib {
      * @param location
      * @throws Exception 
      */
-    public CIMClientLib(String hostname, SRMFConfig setup, URL optionalIndex) throws Exception {
+    public CIMClientLib(String hostname, SRMFConfig config, URL optionalIndex) throws Exception {
+        this.setup = config;
+
         // Install XML sniffer
         CIMXMLTraceListener xmlListener = new CIMXMLTraceListener() {
             @Override
@@ -136,8 +142,12 @@ public class CIMClientLib {
                         try {
                             for (int i = 0; i < CIMClientLib.this.currentSRMFMapRefID.size(); i++) {
                                 SRMFRenderMap.SRMFMapDestination.SRMFMapRef.SRMFRender sRMFRender = CIMClientLib.this.currentSRMFMapRefID.get(i);
-                                System.err.println(SRMFUtils.xproc(SRMFUtils.getXMLDocumentFromString(message),
-                                                                   CIMClientLib.this.exportSRMFRenderMap.getRenderingStyle(sRMFRender.getRender()))); // XXX: Files!
+                                new ExportDispatcher(new File((String) ((RichArrayList) CIMClientLib.this.currentSRMFMapRefID).getAttribute("outputPath")))
+                                        .dispatch(SRMFUtils.xproc(SRMFUtils.getXMLDocumentFromString(message),
+                                                                  CIMClientLib.this.exportSRMFRenderMap.getRenderingStyle(sRMFRender.getRender())),
+                                        (String) ((RichArrayList) CIMClientLib.this.currentSRMFMapRefID).getAttribute("targetSystemHostname"),
+                                        sRMFRender.getDestinationDescriptor());
+                                System.err.println("Done");
                             }
                             CIMClientLib.this.currentSRMFMapRefID = null;
                         } catch (Exception ex) {
@@ -170,23 +180,24 @@ public class CIMClientLib {
         LogAndTraceBroker.getBroker().addCIMXMLTraceListener(xmlListener);
 
         // Local storage
-        this.localStorage = new SRMFLocalStorage(new File(setup.getItem(".srmf.manifest.path", SRMFLocalStorage.DEFAULT_STORAGE_PATH)),
-                                                 setup.getItem(".srmf.manifest.compression", "enabled").toLowerCase().equals("enabled"));
+        this.localStorage = new SRMFLocalStorage(new File(this.setup.getItem(".srmf.manifest.path", SRMFLocalStorage.DEFAULT_STORAGE_PATH)),
+                                                 this.setup.getItem(".srmf.manifest.compression", "enabled").toLowerCase().equals("enabled"));
 
         // Render map
-        this.exportSRMFRenderMap = new SRMFRenderMap(new File(setup.getItem(".srmf.manifest.renderers",
+        this.exportSRMFRenderMap = new SRMFRenderMap(new File(this.setup.getItem(".srmf.manifest.renderers",
                                                                             SRMFRenderMap.DEFAUILT_SRMF_RENDER_PATH)));
         File srmfMap = new File(String.format("%s/%s", SRMFRenderMapResolver.SRMF_MANIFEST_PATH, CIMClientLib.SRMF_MAP_FILE));
         this.exportSRMFRenderMap.loadFromFile(srmfMap.exists() ? srmfMap : new File(CIMClientLib.SRMF_MAP_FILE), optionalIndex);
 
         // CIM Client
-        URL location = setup.getConnectionUrl(hostname);
+        URL location = this.setup.getConnectionUrl(hostname);
+        this.targetSystemHostname = location.getHost();
         this.client = WBEMClientFactory.getClient(WBEMClientConstants.PROTOCOL_CIMXML);
         CIMObjectPath path = new CIMObjectPath(location.getProtocol(),
                 location.getHost(), String.valueOf(location.getPort()), null, null, null);
         Subject subj = new Subject();
-        subj.getPrincipals().add(new UserPrincipal(setup.getUsername(hostname)));
-        subj.getPrivateCredentials().add(new PasswordCredential(setup.getPassword(hostname)));
+        subj.getPrincipals().add(new UserPrincipal(this.setup.getUsername(hostname)));
+        subj.getPrivateCredentials().add(new PasswordCredential(this.setup.getPassword(hostname)));
         this.client.initialize(path, subj, new Locale[]{Locale.US});
     }
 
@@ -298,8 +309,8 @@ public class CIMClientLib {
      * Export to the destination.
      * @param get 
      */
-    public void doExportToDestination(String[] destinationIdArr) throws Exception {
-        String destinationId = destinationIdArr[0];
+    public void doExportToDestination(String[] destinationIdArr, String[] outputPath) throws Exception {
+        String destinationId = destinationIdArr != null ? destinationIdArr[0] : null;
         SRMFRenderMap.SRMFMapDestination dst = null;
         List<SRMFRenderMap.SRMFMapDestination> destinations = this.exportSRMFRenderMap.getSupportedRenderIDs();
         for (int i = 0; i < destinations.size(); i++) {
@@ -313,8 +324,6 @@ public class CIMClientLib {
             throw new Exception(String.format("Destination \"%s\" not recognized.", destinationId));
         }
 
-        System.err.println("Exporting to " + destinationId);
-        
         this.traceMode = true;
         List<SRMFRenderMap.SRMFMapDestination.SRMFMapRef> references = dst.getReferences();
         for (int i = 0; i < references.size(); i++) {
@@ -322,6 +331,9 @@ public class CIMClientLib {
             SRMFRenderMap.SRMFMapProvider sRMFMapProvider = this.exportSRMFRenderMap.getProviderByID(sRMFMapRef.getId());
             try {
                 this.currentSRMFMapRefID = sRMFMapRef.getRenderers();
+                ((RichArrayList) this.currentSRMFMapRefID).addAttribute("outputPath", this.setup.getItem(".srmf.manifest.export",
+                                                                                                         outputPath != null ? outputPath[0] : null));
+                ((RichArrayList) this.currentSRMFMapRefID).addAttribute("targetSystemHostname", this.targetSystemHostname);
                 CloseableIterator<CIMInstance> it = client.execQuery(new CIMObjectPath(null, null, null, sRMFMapProvider.getNamespace(), "", null),
                                                                      sRMFMapProvider.getQuery(), "WQL");
             } catch (Exception ex) {
@@ -356,7 +368,8 @@ public class CIMClientLib {
     public void enumClassInstances(String className) {
         try {
             this.traceMode = true;
-            CloseableIterator<CIMInstance> it = this.client.enumerateInstances(new CIMObjectPath(null, null, null, this.namespace, className, null), true, false, true, null);
+            CloseableIterator<CIMInstance> it = this.client.enumerateInstances(
+                    new CIMObjectPath(null, null, null, this.namespace, className, null), true, false, true, null);
                 //while (it.hasNext()){
                 //    System.out.println(it.next());
                 //}        
@@ -383,24 +396,33 @@ public class CIMClientLib {
      * Usage.
      */
     public static void usage() {
-        System.err.println("Usage: <operations>");
-        System.err.println("Operations:");
+        System.err.println("SrMF v0.1, Copyright (c) SUSE Linux Products GmbH");
+        System.err.println("\nCommon:");
         System.err.println("\t--hostname=<hostname>\t\tHostname to use in the config file.");
         System.err.println("\t--config=/path/to/config\tUsed /etc/srmf.conf or ./srmf.conf by default.");
+        System.err.println("\t--namespace=<value>\t\tNamespace on the target machine.");
+
+        System.err.println("\nDiscovery:");
         System.err.println("\t--show-classes\t\t\tShow available classes on the system.");
         System.err.println("\t--describe=<Object,Object...>\tDescribe an array of objects (or just one).");
-        System.err.println("\t--namespace=<value>\t\tNamespace on the target machine.");
-        System.err.println("\t--export=<value>\t\tExport for deployment with particular CMS.");
         System.err.println("\t--query={...}\t\t\tWQL query block.");
+        System.err.println("\t--index-url\t\t\tPass custom index URL.");
+
+        System.err.println("\nExport:");
+        System.err.println("\t--export=<value>\t\tExport for deployment with particular CMS.");
+        System.err.println("\t--output-path\t\tSpecify custom output path for export.");
         System.err.println("\t--snapshot\t\t\tSnapshot current service manifest.");
         System.err.println("\t--available-cms\t\t\tList of supported CMS.");
-        System.err.println("\t--index-url\t\t\tPass custom index URL.");
-        System.err.println("\t--trace\t\t\t\tShow extended tracebacks of errors.\n");
+
+        System.err.println("\nOther:");
+        System.err.println("\t--trace\t\t\t\tShow extended tracebacks of errors.");
         System.err.println("\t--help\t\t\t\tThis help text.\n");
+
         // --test    Anything for trying something :-)
         System.exit(0);
     }
     
+
     /**
      * Main.
      * @param args
@@ -450,7 +472,7 @@ public class CIMClientLib {
             } else if (params.containsKey("available-cms")) {
                 cimclient.doShowAvailableCMSExports();
             } else if (params.containsKey("export")) {
-                cimclient.doExportToDestination(params.get("export"));
+                cimclient.doExportToDestination(params.get("export"), params.get("output-path"));
             } else if (params.containsKey("describe")) {
                 cimclient.doInspectObjects(params.get("describe"));
             } else if (params.containsKey("show-classes")) {

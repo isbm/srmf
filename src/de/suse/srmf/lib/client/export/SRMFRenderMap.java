@@ -52,7 +52,7 @@ import org.xml.sax.SAXException;
  * @author bo
  */
 public class SRMFRenderMap {
-    public static final String DEFAUILT_SRMF_RENDER_PATH = "/etc/srmf/renderers";
+    public static final String DEFAUILT_SRMF_RENDER_PATH = "/etc/srmf/export";
     private List<SRMFMapDestination> rmap;
     private Map<String, SRMFMapProvider> rproviders;
     private final File renderers;
@@ -135,7 +135,7 @@ public class SRMFRenderMap {
              */
             public static class SRMFRender {
                 private String render;
-                private String outFilename;
+                private String outDestinationDescriptor;
 
                 /**
                  * Constructor.
@@ -145,7 +145,7 @@ public class SRMFRenderMap {
                  */
                 public SRMFRender(String render, String outFilename) {
                     this.render = render;
-                    this.outFilename = outFilename;
+                    this.outDestinationDescriptor = outFilename;
                 }
 
                 /**
@@ -154,8 +154,8 @@ public class SRMFRenderMap {
                  * 
                  * @return 
                  */
-                public String getOutFilename() {
-                    return outFilename;
+                public String getDestinationDescriptor() {
+                    return outDestinationDescriptor;
                 }
 
                 /**
@@ -177,7 +177,7 @@ public class SRMFRenderMap {
              */
             public SRMFMapRef(String id) {
                 this.id = id;
-                this.renderers = new ArrayList<SRMFRender>();
+                this.renderers = new RichArrayList<SRMFRender>();
             }
 
             /**
@@ -200,7 +200,7 @@ public class SRMFRenderMap {
              * @return 
              */
             public List<SRMFRender> getRenderers() {
-                return Collections.unmodifiableList(this.renderers);
+                return this.renderers;
             }
         }
         
