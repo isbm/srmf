@@ -298,12 +298,16 @@ public class CIMClientLib {
                                                               sRMFMapProvider.getObjectClass(), // XXX: Traverse base class in the future.
                                                               sRMFMapProvider.getObjectClass(),
                                                               sRMFMapProvider.getNamespace());
-            if (sRMFMapProvider.getType().equals(SRMFRenderMap.SRMFMapProvider.ACCESS_TYPE_STATIC)) {
-                this.executeQuery(sRMFMapProvider.getQuery(), sRMFMapProvider.getNamespace());
-            } else if (sRMFMapProvider.getType().equals(SRMFRenderMap.SRMFMapProvider.ACCESS_TYPE_INSTANCE)) {
-                this.enumerateInstances(sRMFMapProvider.getObjectClass(), sRMFMapProvider.getNamespace());
-            } else {
-                System.err.println("ERROR: Skipping '%s' (%s) - Unknown access type.".format(sRMFMapProvider.getTitle(), sRMFMapProvider.getObjectClass()));
+            try {
+                if (sRMFMapProvider.getType().equals(SRMFRenderMap.SRMFMapProvider.ACCESS_TYPE_STATIC)) {
+                    this.executeQuery(sRMFMapProvider.getQuery(), sRMFMapProvider.getNamespace());
+                } else if (sRMFMapProvider.getType().equals(SRMFRenderMap.SRMFMapProvider.ACCESS_TYPE_INSTANCE)) {
+                    this.enumerateInstances(sRMFMapProvider.getObjectClass(), sRMFMapProvider.getNamespace());
+                } else {
+                    System.err.println("ERROR: Skipping '%s' (%s) - Unknown access type.".format(sRMFMapProvider.getTitle(), sRMFMapProvider.getObjectClass()));
+                }
+            } catch (WBEMException ex) {
+                System.err.println("Error processing '%s' (%s): %s".format(sRMFMapProvider.getTitle(), sRMFMapProvider.getId(), ex.getLocalizedMessage()));
             }
         }
         this.traceMode = false;
@@ -459,6 +463,7 @@ public class CIMClientLib {
      * @throws Exception 
      */
     public static void main(String[] args) {
+        System.setProperty("sblim.wbem.httpPoolSize", "0");
         Map<String, String[]> params = null;
         try {
             params = SRMFUtils.getArgs(args, "show-classes", "available-cms", "snapshot", "help", "trace");
