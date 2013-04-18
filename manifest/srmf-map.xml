@@ -8,7 +8,9 @@
     </ref>
   </destination>
   <destination name="cfengine-3" title="CFengine v.3 configuration management system">
-    <ref id="installed-packages">
+    <ref id="http-service">
+      <render id="cim-httpd-set-port-cfengine" out="file:httpd_set_listener_port.cf" />
+      <render id="cim-httpd-set-docroot-cfengine" out="file:httpd_set_document_root.cf" />
     </ref>
   </destination>
   <destination name="text" title="ASCII plain text">
