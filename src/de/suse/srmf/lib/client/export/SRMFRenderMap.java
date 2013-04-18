@@ -61,14 +61,18 @@ public class SRMFRenderMap {
      * Provider description.
      */
     public static class SRMFMapProvider {
+        public static final String ACCESS_TYPE_INSTANCE = "instance";
+        public static final String ACCESS_TYPE_STATIC = "static";
+
         private String namespace;
         private String id;
         private String title;
+        private String type;
         private String query;
         private String objectClass;
 
 
-        public SRMFMapProvider(String path, String id, String title, String query) throws Exception {
+        public SRMFMapProvider(String path, String id, String title, String type, String query) throws Exception {
             String nsp = null;
             String cls = null;
             if (path.contains(":")) {
@@ -97,27 +101,32 @@ public class SRMFRenderMap {
             this.objectClass = cls;
             this.id = id;
             this.title = title;
+            this.type = type;
             this.query = query;
         }
 
         public String getObjectClass() {
-            return objectClass;
+            return this.objectClass;
         }
 
         public String getId() {
-            return id;
+            return this.id;
         }
 
         public String getNamespace() {
-            return namespace;
+            return this.namespace;
         }
 
         public String getQuery() {
-            return query;
+            return this.query;
         }
 
         public String getTitle() {
-            return title;
+            return this.title;
+        }
+
+        public String getType() {
+            return this.type;
         }
     }
     

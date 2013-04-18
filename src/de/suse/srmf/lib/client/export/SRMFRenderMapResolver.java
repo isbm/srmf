@@ -98,6 +98,7 @@ public final class SRMFRenderMapResolver {
                 SRMFMapProvider provider = new SRMFMapProvider(objElement.getAttribute("path"), 
                                                                objElement.getAttribute("id"),
                                                                objElement.getAttribute("title"),
+                                                               objElement.getAttribute("type"),
                                                                this.getQuery(objElement));
                 this.providers.put(provider.getId(), provider);
             }

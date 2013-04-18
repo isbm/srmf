@@ -147,7 +147,7 @@ public class CIMClientLib {
                                                                   CIMClientLib.this.exportSRMFRenderMap.getRenderingStyle(sRMFRender.getRender())),
                                         (String) ((RichArrayList) CIMClientLib.this.currentSRMFMapRefID).getAttribute("targetSystemHostname"),
                                         sRMFRender.getDestinationDescriptor());
-                                System.err.println("Done");
+                                System.err.println("Writing " + sRMFRender.getDestinationDescriptor());
                             }
                             CIMClientLib.this.currentSRMFMapRefID = null;
                         } catch (Exception ex) {
@@ -229,8 +229,7 @@ public class CIMClientLib {
         this.traceMode = true;
         for (String objName : objects) {
             try {
-                CloseableIterator<CIMInstance> it = client.execQuery(new CIMObjectPath(null, null, null, this.namespace, "", null),
-                                                                     "select * from " + objName, "WQL");
+                CloseableIterator<CIMInstance> it = this.executeQuery("select * from " + objName, null);
                 while (it.hasNext()){
                     CIMInstance instance = it.next();
                     //System.out.println(instance);
@@ -299,7 +298,13 @@ public class CIMClientLib {
                                                               sRMFMapProvider.getObjectClass(), // XXX: Traverse base class in the future.
                                                               sRMFMapProvider.getObjectClass(),
                                                               sRMFMapProvider.getNamespace());
-            client.execQuery(new CIMObjectPath(null, null, null, sRMFMapProvider.getNamespace(), "", null), sRMFMapProvider.getQuery(), "WQL");
+            if (sRMFMapProvider.getType().equals(SRMFRenderMap.SRMFMapProvider.ACCESS_TYPE_STATIC)) {
+                this.executeQuery(sRMFMapProvider.getQuery(), sRMFMapProvider.getNamespace());
+            } else if (sRMFMapProvider.getType().equals(SRMFRenderMap.SRMFMapProvider.ACCESS_TYPE_INSTANCE)) {
+                this.enumerateInstances(sRMFMapProvider.getObjectClass(), sRMFMapProvider.getNamespace());
+            } else {
+                System.err.println("ERROR: Skipping '%s' (%s) - Unknown access type.".format(sRMFMapProvider.getTitle(), sRMFMapProvider.getObjectClass()));
+            }
         }
         this.traceMode = false;
     }
@@ -334,8 +339,13 @@ public class CIMClientLib {
                 ((RichArrayList) this.currentSRMFMapRefID).addAttribute("outputPath", this.setup.getItem(".srmf.manifest.export",
                                                                                                          outputPath != null ? outputPath[0] : null));
                 ((RichArrayList) this.currentSRMFMapRefID).addAttribute("targetSystemHostname", this.targetSystemHostname);
-                CloseableIterator<CIMInstance> it = client.execQuery(new CIMObjectPath(null, null, null, sRMFMapProvider.getNamespace(), "", null),
-                                                                     sRMFMapProvider.getQuery(), "WQL");
+                if (sRMFMapProvider.getType().equals(SRMFRenderMap.SRMFMapProvider.ACCESS_TYPE_STATIC)) {
+                    this.executeQuery(sRMFMapProvider.getQuery(), sRMFMapProvider.getNamespace());
+                } else if (sRMFMapProvider.getType().equals(SRMFRenderMap.SRMFMapProvider.ACCESS_TYPE_INSTANCE)) {
+                    this.enumerateInstances(sRMFMapProvider.getObjectClass(), sRMFMapProvider.getNamespace());
+                } else {
+                    System.err.println("ERROR: Skipping '%s' (%s) - Uknown access type.".format(sRMFMapProvider.getTitle(), sRMFMapProvider.getId()));
+                }
             } catch (Exception ex) {
                 System.err.println(String.format("Failed to render \"%s\" provider for %s!", sRMFMapProvider.getId(), dst.getTitle()));
             }
@@ -343,6 +353,31 @@ public class CIMClientLib {
         }
     }
     
+    
+    /**
+     * Execute query.
+     * 
+     * @param query
+     * @param namespace
+     * @throws WBEMException 
+     */
+    private CloseableIterator<CIMInstance> executeQuery(String query, String namespace) throws WBEMException {
+        return this.client.execQuery(new CIMObjectPath(null, null, null,
+                (namespace == null ? this.namespace : namespace), "", null), query, "WQL");
+    }
+
+    /**
+     * Enumerate class instances.
+     * 
+     * @param className
+     * @param namespace
+     * @return
+     * @throws WBEMException 
+     */
+    private CloseableIterator<CIMInstance> enumerateInstances(String className, String namespace) throws WBEMException {
+        return this.client.enumerateInstances(new CIMObjectPath(null, null, null, 
+                (namespace == null ? this.namespace : namespace), className, null), true, false, true, null);
+    }
 
     /**
      * Process compound object.
@@ -352,7 +387,7 @@ public class CIMClientLib {
     public void doQuery(String query) {
         this.traceMode = true;
         try {
-            client.execQuery(new CIMObjectPath(null, null, null, this.namespace, "", null), query, "WQL");
+            this.executeQuery(query, null);
         } catch (Exception ex) {
             System.err.println(String.format(">>> Failed to process \"%s\" query!", query));
         }
@@ -365,15 +400,10 @@ public class CIMClientLib {
      * Enumerates all the class instances
      * @param className 
      */
-    public void enumClassInstances(String className) {
+    public void doEnumerateClassInstances(String className) {
+        this.traceMode = true;
         try {
-            this.traceMode = true;
-            CloseableIterator<CIMInstance> it = this.client.enumerateInstances(
-                    new CIMObjectPath(null, null, null, this.namespace, className, null), true, false, true, null);
-                //while (it.hasNext()){
-                //    System.out.println(it.next());
-                //}        
-                //it.close();
+            this.enumerateInstances(className, null);
         } catch (WBEMException ex) {
             Logger.getLogger(CIMClientLib.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -480,7 +510,7 @@ public class CIMClientLib {
             } else if (params.containsKey("query")) {
                 cimclient.doQuery(params.get("query")[0]);
             } else if (params.containsKey("test")) {
-                cimclient.enumClassInstances(params.get("test")[0]);
+                cimclient.doEnumerateClassInstances(params.get("test")[0]);
             } else {
                 CIMClientLib.usage();
                 System.err.println("Error:\n\tWrong parameters.");
