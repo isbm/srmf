@@ -12,7 +12,7 @@ Currently it is in early prototype stage and only requires Java RTE installed on
 Configuration
 -------------
 
-### SRMF main config
+### SrMF main config
 
 This is the main config to describe the entire service (one box or many):
 
@@ -21,11 +21,33 @@ This is the main config to describe the entire service (one box or many):
 3. Set your manifest path other than /tmp :)
 4. Configure your host auth. Syntax is: "hostname/qualifier". Qualifiers are: "proto" for protocol; "port" for port; "user" is for user name to authenticate against CIM broker and "password" is the password there.
 
-### SRMF object providers for entity description
+An example of the configuration file, located in /etc/srmf.conf:
 
-This config is for gathering system description (srmf-objects.xml). At the moment there is no mechanism used for making sure some providers not hanging etc, hence it exists. In a fugure it might be only optional or disappear at all.
+    .srmf.manifest.path = /tmp/srmf/manifest
+    .srmf.manifest.renderers = /etc/srmf/export
+    .srmf.manifest.compression = enabled
+    .srmf.manifest.export = /tmp/srmf/manifest/
 
-Objects can be combined into one as well, using WBEM Query Language. More: http://www.wbemsolutions.com/tutorials/DMTF/wbem-cql.html
+    my_host=https://my_user:my_password@babayaga.suse.de:5989/root/cimv2
+
+The last entry of the configuration file indicates the connection to the host **my_host** and the default namespace **root/cimv2**.
+
+### SrMF object providers for entity description
+
+SrMF stores all the modules, required for discovery, rendering and manipulation the configuration management data in the _/etc/srmf_ directory. In that directory there are two sub-directories, essential for the operations:
+
+1. export
+2. manifest
+
+The *export* directory is storing XSL stylesheets, required to export the resulting data to the external media (USB stick, tarball archive, CD-ROM etc).
+
+The *manifest* directory is storing a structure with a discovery modules, required to read the information from the network node. Discovery module is essentially an XML with description what WQL query to run on what provider in the context to the target machine.
+
+Discovery modules directory structure is very flexible and allows clear separation between multiple layers for various purposes. The *manifest* directory structure is provided by the vendor, however can be overriden by the administration and used differently as well as can be stored remotely on the HTTP server and reused from there.
+
+In the root of the *manifest* directory there is an essential file, called *srmf-map.xml* which maps export XSL stylesheets to the provider probes.
+
+Deeper there is *info* directory with the whole templating tree, which defines the probes directly. The templates can be nested (included) into each other, which allows flexibility. Provider objects can be combined into one as well, using WBEM Query Language. More: http://www.wbemsolutions.com/tutorials/DMTF/wbem-cql.html
 
 ### SRMF object mapping for manifest export and deploying
 
@@ -36,15 +58,15 @@ Usage Examples
 
 Show classes under the default namespace:
 
-    $ java -jar srmf.jar --hostname=foo.bar.com --show-classes
+    $ java -jar srmf.jar --hostname=my_host --show-classes
 
 Describe the entire class (or classes, if comma separated). The description returns just message XML:
 
-    $ java -jar srmf.jar --hostname=foo.bar.com --describe=MY_Object,MY_OtherObject
+    $ java -jar srmf.jar --hostname=my_host --describe=MY_Object,MY_OtherObject
 
 Display supported configuration management destinations:
 
-    $ java -jar srmf.jar --hostname=foo.bar.com --available-cms
+    $ java -jar srmf.jar --hostname=my_host --available-cms
 
 Typical output should be:
 
@@ -55,13 +77,13 @@ Typical output should be:
 
 Export the system description for deployment through the CFengine v3 could be done this way:
 
-    $ java -jar srmf.jar --hostname=foo.bar.com --export=cfengine-3
+    $ java -jar srmf.jar --hostname=my_host --export=cfengine-3
 
 Note: export is in the very early stage and it needs more attention for separation between scenarios and files for various CMS. At the moment working ony "text" and it give just a bare output to the STDOUT.
 
 To export the configuration to your USB stick and bring to another machine for 3rd party processing, simply use "snapshot":
 
-    $ java -jar srmf.jar --hostname=foo.bar.com --snapshot
+    $ java -jar srmf.jar --hostname=my_host --snapshot
 
 Typical output should be something like this:
     
