@@ -48,6 +48,7 @@ import java.util.Properties;
 public final class SRMFConfig {
     private Properties setup;
     private Map<String, URL> hosts;
+    private static SRMFConfig instance;
 
     /**
      * Constructor of the config bean.
@@ -55,7 +56,7 @@ public final class SRMFConfig {
      * @param alternativePath
      * @throws IOException 
      */
-    public SRMFConfig(String alternativePath) throws IOException {
+    private SRMFConfig(String alternativePath) throws IOException {
         File setupFile = new File(alternativePath != null ? alternativePath : "/etc/srmf.conf");
         if (!setupFile.exists()) {
             System.err.println(String.format("Warning: %s does not exists. Using default in current directly.", setupFile.getCanonicalPath()));
@@ -74,6 +75,35 @@ public final class SRMFConfig {
         this.parse();
     }
 
+    /**
+     * Get already initialized instance or initialize one without an alternative config path.
+     * 
+     * @return 
+     */
+    public static SRMFConfig getInstance() throws IOException {
+        if (SRMFConfig.instance == null) {
+            return SRMFConfig.initialize(null);
+        }
+
+        return SRMFConfig.instance;
+    }
+
+    
+    /**
+     * Initializes the config.
+     * 
+     * @param alternativePath
+     * @return
+     * @throws IOException 
+     */
+    public static synchronized SRMFConfig initialize(String alternativePath) throws IOException {
+        if (SRMFConfig.instance == null) {
+            SRMFConfig.instance = new SRMFConfig(alternativePath);
+        }
+
+        return SRMFConfig.instance;
+    }
+    
 
     private void parse() throws MalformedURLException {
         Iterator keys = this.setup.keySet().iterator();
