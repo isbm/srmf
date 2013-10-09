@@ -34,15 +34,16 @@ package de.suse.srmf.lib.client;
 
 import de.suse.srmf.lib.client.export.ExportDispatcher;
 import de.suse.srmf.lib.client.export.RichArrayList;
-import de.suse.srmf.lib.client.export.SRMFLocalStorage;
+import de.suse.srmf.lib.client.export.storage.SRMFLocalStorage;
 import de.suse.srmf.lib.client.export.SRMFMessage;
 import de.suse.srmf.lib.client.export.SRMFRenderMap;
 import de.suse.srmf.lib.client.export.SRMFRenderMapResolver;
-import de.suse.srmf.lib.client.export.SRMFStorage;
+import de.suse.srmf.lib.client.export.storage.SRMFStorage;
 import de.suse.srmf.lib.client.export.SRMFUtils;
 import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -71,16 +72,21 @@ import org.sblim.cimclient.internal.logging.LogAndTraceBroker;
  * @author bo
  */
 class SRMFMessageMeta {
+    public static final int FILE_STORE = 1;
+    public static final int DB_STORE = 2;
+
     private String providerBaseClass;
     private String providerClass;
     private String namespace;
     private String objectId;
+    private Map<Integer, Boolean> flags;
 
     public SRMFMessageMeta(String objectId, String providerBaseClass, String providerClass, String namespace) {
         this.objectId = objectId;
         this.providerBaseClass = providerBaseClass;
         this.providerClass = providerClass;
         this.namespace = namespace;
+        this.flags = new HashMap<Integer, Boolean>();
     }
 
     public String getNamespace() {
@@ -97,6 +103,23 @@ class SRMFMessageMeta {
 
     public String getObjectId() {
         return objectId;
+    }
+    
+    public SRMFMessageMeta setFlag(int flag) {
+        this.flags.put(flag, Boolean.TRUE);
+        return this;
+    }
+    
+    public SRMFMessageMeta unsetFlag(int flag) {
+        if (this.flags.containsKey(flag)) {
+            this.flags.remove(flag);
+        }
+        
+        return this;
+    }
+    
+    public Boolean hasFlag(int flag) {
+        return this.flags.containsKey(flag);
     }
 }
 
@@ -157,14 +180,20 @@ public class CIMClientLib {
                     
                     // Export
                     else if (CIMClientLib.this.currentSRMFMessageMeta != null) {
-                        try {
-                            CIMClientLib.this.localStorage.storeMessage(new SRMFMessage(CIMClientLib.this.currentSRMFMessageMeta.getObjectId(),
-                                                                                        CIMClientLib.this.currentSRMFMessageMeta.getProviderBaseClass(),
-                                                                                        CIMClientLib.this.currentSRMFMessageMeta.getProviderBaseClass(),
-                                                                                        message));
-                        } catch (Exception ex) {
-                            ex.printStackTrace();
-                            System.err.println("Error writing provider data: " + ex.getLocalizedMessage());
+                        if (CIMClientLib.this.currentSRMFMessageMeta.hasFlag(SRMFMessageMeta.FILE_STORE)) {
+                            try {
+                                CIMClientLib.this.localStorage.storeMessage(new SRMFMessage(CIMClientLib.this.currentSRMFMessageMeta.getObjectId(),
+                                                                                            CIMClientLib.this.currentSRMFMessageMeta.getProviderBaseClass(),
+                                                                                            CIMClientLib.this.currentSRMFMessageMeta.getProviderBaseClass(),
+                                                                                            message));
+                            } catch (Exception ex) {
+                                ex.printStackTrace();
+                                System.err.println("Error writing provider data: " + ex.getLocalizedMessage());
+                            }
+                        } else if (CIMClientLib.this.currentSRMFMessageMeta.hasFlag(SRMFMessageMeta.DB_STORE)) {
+                            System.err.println("---------------");
+                            System.err.println(message);
+                            System.err.println("---------------");
                         }
 
                         CIMClientLib.this.currentSRMFMessageMeta = null;
@@ -297,7 +326,9 @@ public class CIMClientLib {
             this.currentSRMFMessageMeta = new SRMFMessageMeta(sRMFMapProvider.getId(),
                                                               sRMFMapProvider.getObjectClass(), // XXX: Traverse base class in the future.
                                                               sRMFMapProvider.getObjectClass(),
-                                                              sRMFMapProvider.getNamespace());
+                                                              sRMFMapProvider.getNamespace())
+                                                                  .setFlag(SRMFMessageMeta.FILE_STORE) // XXX: Config!
+                                                                  .setFlag(SRMFMessageMeta.DB_STORE);  // XXX: Config!
             try {
                 if (sRMFMapProvider.getType().equals(SRMFRenderMap.SRMFMapProvider.ACCESS_TYPE_STATIC)) {
                     this.executeQuery(sRMFMapProvider.getQuery(), sRMFMapProvider.getNamespace());
@@ -498,7 +529,7 @@ public class CIMClientLib {
         // Run! :)
         try {
             CIMClientLib cimclient = new CIMClientLib(params.get("hostname")[0], 
-                                                      new SRMFConfig(params.get("config") != null ? params.get("config")[0] : null),
+                                                      SRMFConfig.initialize(params.get("config") != null ? params.get("config")[0] : null),
                                                       params.get("index-url") != null ? new URL(params.get("index-url")[0]) : null);
             cimclient.setNamespace(params.get("namespace")[0]);
             
