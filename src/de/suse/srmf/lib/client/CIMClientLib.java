@@ -40,7 +40,9 @@ import de.suse.srmf.lib.client.export.SRMFRenderMap;
 import de.suse.srmf.lib.client.export.SRMFRenderMapResolver;
 import de.suse.srmf.lib.client.export.storage.SRMFStorage;
 import de.suse.srmf.lib.client.export.SRMFUtils;
+import de.suse.srmf.lib.client.export.storage.SRMFOrientDBStorage;
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -59,10 +61,12 @@ import javax.wbem.client.UserPrincipal;
 import javax.wbem.client.WBEMClient;
 import javax.wbem.client.WBEMClientConstants;
 import javax.wbem.client.WBEMClientFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import org.sblim.cimclient.CIMXMLTraceListener;
 import org.sblim.cimclient.internal.cimxml.CIMClientXML_HelperImpl;
 import org.sblim.cimclient.internal.cimxml.CimXmlSerializer;
 import org.sblim.cimclient.internal.logging.LogAndTraceBroker;
+import org.xml.sax.SAXException;
 
 
 
@@ -180,20 +184,28 @@ public class CIMClientLib {
                     
                     // Export
                     else if (CIMClientLib.this.currentSRMFMessageMeta != null) {
-                        if (CIMClientLib.this.currentSRMFMessageMeta.hasFlag(SRMFMessageMeta.FILE_STORE)) {
-                            try {
-                                CIMClientLib.this.localStorage.storeMessage(new SRMFMessage(CIMClientLib.this.currentSRMFMessageMeta.getObjectId(),
-                                                                                            CIMClientLib.this.currentSRMFMessageMeta.getProviderBaseClass(),
-                                                                                            CIMClientLib.this.currentSRMFMessageMeta.getProviderBaseClass(),
-                                                                                            message));
-                            } catch (Exception ex) {
-                                ex.printStackTrace();
-                                System.err.println("Error writing provider data: " + ex.getLocalizedMessage());
+                        try {
+                            SRMFMessage msg = new SRMFMessage(CIMClientLib.this.currentSRMFMessageMeta.getObjectId(),
+                                    CIMClientLib.this.currentSRMFMessageMeta.getProviderBaseClass(),
+                                    CIMClientLib.this.currentSRMFMessageMeta.getProviderBaseClass(),
+                                    message);
+
+                            // Store to the filesystem
+                            if (CIMClientLib.this.currentSRMFMessageMeta.hasFlag(SRMFMessageMeta.FILE_STORE)) {
+                                try {
+                                    CIMClientLib.this.localStorage.storeMessage(msg);
+                                } catch (Exception ex) {
+                                    ex.printStackTrace();
+                                    System.err.println("Error writing provider data: " + ex.getLocalizedMessage());
+                                }
                             }
-                        } else if (CIMClientLib.this.currentSRMFMessageMeta.hasFlag(SRMFMessageMeta.DB_STORE)) {
-                            System.err.println("---------------");
-                            System.err.println(message);
-                            System.err.println("---------------");
+                            
+                            // Store to the orientdb
+                            if (CIMClientLib.this.currentSRMFMessageMeta.hasFlag(SRMFMessageMeta.DB_STORE)) {
+                                SRMFOrientDBStorage.getInstance().storeMessage(msg);
+                            }
+                        } catch (Exception ex) {
+                            Logger.getLogger(CIMClientLib.class.getName()).log(Level.SEVERE, null, ex);
                         }
 
                         CIMClientLib.this.currentSRMFMessageMeta = null;
@@ -211,7 +223,7 @@ public class CIMClientLib {
         // Local storage
         this.localStorage = new SRMFLocalStorage(new File(this.setup.getItem(".srmf.manifest.path", SRMFLocalStorage.DEFAULT_STORAGE_PATH)),
                                                  this.setup.getItem(".srmf.manifest.compression", "enabled").toLowerCase().equals("enabled"));
-
+ 
         // Render map
         this.exportSRMFRenderMap = new SRMFRenderMap(new File(this.setup.getItem(".srmf.manifest.renderers",
                                                                             SRMFRenderMap.DEFAUILT_SRMF_RENDER_PATH)));
@@ -327,7 +339,7 @@ public class CIMClientLib {
                                                               sRMFMapProvider.getObjectClass(), // XXX: Traverse base class in the future.
                                                               sRMFMapProvider.getObjectClass(),
                                                               sRMFMapProvider.getNamespace())
-                                                                  .setFlag(SRMFMessageMeta.FILE_STORE) // XXX: Config!
+                                                                  //.setFlag(SRMFMessageMeta.FILE_STORE) // XXX: Config!
                                                                   .setFlag(SRMFMessageMeta.DB_STORE);  // XXX: Config!
             try {
                 if (sRMFMapProvider.getType().equals(SRMFRenderMap.SRMFMapProvider.ACCESS_TYPE_STATIC)) {
