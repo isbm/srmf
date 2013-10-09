@@ -1,11 +1,1 @@
-#!/bin/sh
-#
-# Modify this script for packaging!
-#
-
-BASE=`realpath $0 | sed -e 's/srmf$//'`
-DIST=`realpath $BASE../dist/srmf.jar`
-CP="/usr/share/java/sblim-cim-client2-2.2.1.jar:$DIST"
-
-/usr/bin/java -cp $CP de.suse.srmf.lib.client.CIMClientLib $@
-
+/home/bo/projects/cim/srmf/bin/srmf.11.3

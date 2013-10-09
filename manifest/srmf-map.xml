@@ -2,9 +2,7 @@
 <object-map>
   <destination name="puppet" title="Puppet">
     <ref id="installed-packages">
-      <render id="cim-installed-packages-pupppet" out="file:http-service-chef-install.rb" />
-      <render id="cim-installed-packages-pupppet" out="file:http-service-chef-remove.rb" />
-      <render id="cim-installed-packages-pupppet" out="file:http-service-chef-solo.json" />
+      <render id="cim-installed-packages-pupppet" out="file:installed-packages.rb" />
     </ref>
   </destination>
   <destination name="cfengine-3" title="CFengine v.3 configuration management system">

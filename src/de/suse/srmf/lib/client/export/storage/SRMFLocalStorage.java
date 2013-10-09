@@ -29,8 +29,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package de.suse.srmf.lib.client.export;
+package de.suse.srmf.lib.client.export.storage;
 
+import de.suse.srmf.lib.client.export.SRMFMessage;
+import de.suse.srmf.lib.client.export.SRMFMessageDiff;
+import de.suse.srmf.lib.client.export.SRMFUtils;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;

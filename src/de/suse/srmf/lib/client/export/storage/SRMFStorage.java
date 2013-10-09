@@ -29,7 +29,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-package de.suse.srmf.lib.client.export;
+package de.suse.srmf.lib.client.export.storage;
+
+import de.suse.srmf.lib.client.export.SRMFMessage;
+import de.suse.srmf.lib.client.export.SRMFMessageDiff;
 
 /**
  * Exporter.
