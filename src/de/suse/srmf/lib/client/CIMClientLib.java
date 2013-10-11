@@ -412,7 +412,8 @@ public class CIMClientLib {
      * @param namespace
      * @throws WBEMException 
      */
-    private CloseableIterator<CIMInstance> executeQuery(String query, String namespace) throws WBEMException {
+    private CloseableIterator<CIMInstance> executeQuery(String query, String namespace)
+            throws WBEMException {
         return this.client.execQuery(new CIMObjectPath(null, null, null,
                 (namespace == null ? this.namespace : namespace), "", null), query, "WQL");
     }
@@ -425,10 +426,27 @@ public class CIMClientLib {
      * @return
      * @throws WBEMException 
      */
-    private CloseableIterator<CIMInstance> enumerateInstances(String className, String namespace) throws WBEMException {
+    private CloseableIterator<CIMInstance> enumerateInstances(String className, String namespace)
+            throws WBEMException {
         return this.client.enumerateInstances(new CIMObjectPath(null, null, null, 
                 (namespace == null ? this.namespace : namespace), className, null), true, false, true, null);
     }
+
+
+    /**
+     * Enumerate instance names.
+     * 
+     * @param className
+     * @param namespace
+     * @return
+     * @throws WBEMException 
+     */
+    private CloseableIterator<CIMObjectPath> enumerateInstanceNames(String className, String namespace)
+            throws WBEMException {
+        return this.client.enumerateInstanceNames(new CIMObjectPath(null, null, null,
+                (namespace == null ? this.namespace : namespace), className, null));
+    }
+
 
     /**
      * Process compound object.
@@ -463,19 +481,18 @@ public class CIMClientLib {
     
     @SuppressWarnings("empty-statement")
     public void doClassAssociationMap(String className) throws WBEMException {
-        CIMObjectPath path = new CIMObjectPath("https", "g34.suse.de", "5989", "root/cimv2", className, null);
-        CloseableIterator<CIMObjectPath> x = this.client.enumerateInstanceNames(path);
-        while (x.hasNext()) {
-            CIMObjectPath objp = x.next();
-            System.err.println("Name: " + objp);
-            CloseableIterator<CIMObjectPath> associations = this.client.associatorNames(objp, null, null, null, null);
-            System.err.println("Associations: " + associations);
+        CloseableIterator<CIMObjectPath> instanceNames = this.enumerateInstanceNames(className, null);
+        while (instanceNames.hasNext()) {
+            CIMObjectPath objPth = instanceNames.next();
+            System.err.println("Object: " + objPth.getObjectName());
+            CloseableIterator<CIMObjectPath> associations = this.client.associatorNames(objPth, null, null, null, null);
             while (associations.hasNext()) {
-                System.err.println("Association: " + associations.next());
+                CIMObjectPath refObjPth = associations.next();
+                System.err.println("Association: " + refObjPth.getObjectName());
             }
             associations.close();
         }
-        x.close();
+        instanceNames.close();
     }
 
     /**
