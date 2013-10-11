@@ -185,10 +185,13 @@ public class CIMClientLib {
                     // Export
                     else if (CIMClientLib.this.currentSRMFMessageMeta != null) {
                         try {
-                            SRMFMessage msg = new SRMFMessage(CIMClientLib.this.currentSRMFMessageMeta.getObjectId(),
+                            SRMFMessage msg = new SRMFMessage(
+                                    CIMClientLib.this.targetSystemHostname,
+                                    CIMClientLib.this.currentSRMFMessageMeta.getObjectId(),
                                     CIMClientLib.this.currentSRMFMessageMeta.getProviderBaseClass(),
                                     CIMClientLib.this.currentSRMFMessageMeta.getProviderBaseClass(),
-                                    message);
+                                    message
+                            );
 
                             // Store to the filesystem
                             if (CIMClientLib.this.currentSRMFMessageMeta.hasFlag(SRMFMessageMeta.FILE_STORE)) {
