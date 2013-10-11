@@ -31,13 +31,145 @@
 
 package de.suse.srmf.lib.client.export.storage;
 
-import com.orientechnologies.orient.core.Orient;
-import com.orientechnologies.orient.core.db.ODatabaseThreadLocalFactory;
-import com.orientechnologies.orient.core.db.document.ODatabaseDocumentPool;
-import com.orientechnologies.orient.core.db.record.ODatabaseRecord;
-import de.suse.srmf.lib.client.SRMFConfig;
+import com.orientechnologies.orient.core.id.ORID;
+import com.orientechnologies.orient.core.record.impl.ODocument;
 import de.suse.srmf.lib.client.export.SRMFMessage;
 import de.suse.srmf.lib.client.export.SRMFMessageDiff;
+import de.suse.srmf.lib.client.export.SRMFUtils;
+import java.io.IOException;
+import java.util.AbstractMap.SimpleEntry;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
+
+
+
+/**
+ * Parses and stores the CIM object.
+ * 
+ * @author bo
+ */
+class SimpleCIMObject {    
+    private Document doc;
+
+    public SimpleCIMObject() {}
+    
+    private ODocument cimSetNamespacePath(ODocument vertex, Node instance) {
+        NodeList namespacePathList = ((Element) instance).getElementsByTagName("NAMESPACEPATH");
+        for (int i = 0; i < namespacePathList.getLength(); i++) {
+            Node el = namespacePathList.item(i);
+            // Get host name
+            NodeList nl = ((Element) el).getElementsByTagName("HOST");
+            if (nl.getLength() > 0) {
+                vertex.field("HOST", SRMFUtils.getDOMElementText(nl.item(0), null, null).toString());
+            }
+            
+            // Get local name spacepath
+            nl = ((Element) el).getElementsByTagName("LOCALNAMESPACEPATH");
+            StringBuilder namespace = new StringBuilder();
+            if (nl.getLength() > 0) {
+                nl = ((Element) nl.item(0)).getElementsByTagName("NAMESPACE");
+                for (int nsi = 0; nsi < nl.getLength(); nsi++) {
+                    namespace.append(((Element) nl.item(nsi)).getAttribute("NAME"));
+                    if (nsi < nl.getLength() - 1) {
+                        namespace.append("/");
+                    }
+                }
+            }
+
+            if (!namespace.toString().isEmpty()) {
+                vertex.field("LOCALNAMESPACEPATH", namespace.toString());
+            }
+        }
+
+        return vertex;
+    }
+
+
+    /**
+     * Collect all the properties from one instance.
+     * 
+     * @param vertex
+     * @param instance
+     * @return 
+     */
+    private ODocument cimSetProperties(ODocument vertex, Node instance) {
+        System.err.println("Setting properties to the instance " + instance);
+        NodeList propertyNodeList = ((Element) instance).getElementsByTagName("PROPERTY");
+        for (int i = 0; i < propertyNodeList.getLength(); i++) {
+            Node propertyNode = propertyNodeList.item(i);
+            String pKey = ((Element) propertyNode).getAttribute("NAME").trim();
+            String pValue = SRMFUtils.getDOMElementText(propertyNode, null, null).toString().trim();
+            if (!pValue.isEmpty()) {
+                vertex.field(pKey, pValue);
+            }
+        }
+
+        return vertex;
+    }
+    
+
+    /**
+     * Get DOM instances.
+     * 
+     * @return 
+     */
+    private NodeList getInstances() {
+        NodeList instances = this.doc.getElementsByTagName("VALUE.NAMEDINSTANCE");
+        if (instances.getLength() == 0) {
+            instances = this.doc.getElementsByTagName("VALUE.OBJECTWITHPATH");
+        }
+
+        return instances;
+    }
+    
+    /**
+     * Get one CIM instance.
+     * 
+     * @param instance 
+     */
+    private void cimCreateInstanceDoc(Node instance) throws IOException {
+        OrientConnection db = OrientDBConnectionPool.getInstance().acquire();
+        ODocument obj = db.newInstance(((Element)((Element) instance).getElementsByTagName("INSTANCENAME").item(0)).getAttribute("CLASSNAME"));
+        this.cimSetNamespacePath(obj, instance);
+        this.cimSetProperties(obj, instance);
+        obj.save();
+        ORID oid = obj.getIdentity();
+        db.close();
+    }
+
+    /**
+     * Store the document to the OrientDB.
+     * 
+     * @param document 
+     */
+    public void store(Document document) throws IOException {
+        this.doc = document;
+        NodeList instances = this.getInstances();
+        for (int i = 0; i < instances.getLength(); i++) {
+            Node instance = instances.item(i);
+            this.cimCreateInstanceDoc(instance);
+        }        
+    }
+
+    private void dumpNodeTree(Node node, int offset) {
+        String shift = "";
+        for (int i = 0; i < offset; i++) {
+            shift = shift + "  ";
+        }
+        
+        for (int i = 0; i < node.getChildNodes().getLength(); i++) {
+            Node n = node.getChildNodes().item(i);
+            if (n.getNodeType() != Document.TEXT_NODE) {
+                System.err.println(String.format("%s%s", shift, n.getNodeName()));
+                this.dumpNodeTree(n, offset + 1);
+            }
+        }
+    }
+}
+
 
 /**
  *
@@ -51,6 +183,7 @@ public class SRMFOrientDBStorage implements SRMFStorage {
     
     private static SRMFOrientDBStorage instance;
     
+
     /**
      * Exception, related to the SRMF OrientDB storage init error.
      */
@@ -60,45 +193,22 @@ public class SRMFOrientDBStorage implements SRMFStorage {
         }
     }
 
-    /**
-     * Database connection factory.
-     */
-    public static class ODBConnectionFactory implements ODatabaseThreadLocalFactory {
-        private String url;
-        private String user;
-        private String password;
 
-        private ODBConnectionFactory(SRMFConfig config) throws SRMFOrientStorageException {
-            this.url = config.getItem(SRMFOrientDBStorage.DB_URL, null);
-            this.user = config.getItem(SRMFOrientDBStorage.DB_USER, null);
-            this.password = config.getItem(SRMFOrientDBStorage.DB_PASSWORD, null);
-            
-            if (this.url == null) {
-                throw new SRMFOrientStorageException("OrientDB URL cannot be empty in the configuration");
-            } else if (this.user == null) {
-                throw new SRMFOrientStorageException("OrientDB user should be specified in the configuration");
-            } else if (this.password == null) {
-                throw new SRMFOrientStorageException("OrientDB password credentials should be specified in the configuration");
-            }
-        }
-
-        @Override
-        public ODatabaseRecord getThreadDatabase() {
-            return ODatabaseDocumentPool.global().acquire(this.url, this.user, this.password);
-        }
+    private SRMFOrientDBStorage()
+            throws SRMFOrientStorageException,
+                   IOException {
     }
 
-    private SRMFOrientDBStorage() throws SRMFOrientStorageException {
-        Orient.instance().registerThreadDatabaseFactory(new ODBConnectionFactory(null));
-    }
 
     /**
      * Instance singleton. This one registers the factory pool only once to the Orient DB.
      * @return 
      */
-    public static synchronized SRMFOrientDBStorage getInstance() {
+    public static synchronized SRMFOrientDBStorage getInstance() 
+            throws SRMFOrientStorageException,
+                   IOException {
         if (SRMFOrientDBStorage.instance == null) {
-            
+            SRMFOrientDBStorage.instance = new SRMFOrientDBStorage();
         }
 
         return SRMFOrientDBStorage.instance;
@@ -107,8 +217,37 @@ public class SRMFOrientDBStorage implements SRMFStorage {
 
     @Override
     public void storeMessage(SRMFMessage message) {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        try {
+            new SimpleCIMObject().store(message.getDocument());
+        } catch (IOException ex) {
+            System.err.println("Error storing message: " + ex.getLocalizedMessage());
+        }
     }
+    
+    
+    /**
+     * Get CIM property.
+     * 
+     * @param property
+     * @return 
+     */
+    private SimpleEntry getCIMProperty(Element property) {
+        if (!property.hasAttribute("NAME")) {
+            return null;
+        }
+
+        NodeList values = property.getElementsByTagName("VALUE");
+        if (values != null && values.getLength() > 0) {
+            Node value = values.item(0);
+            NodeList contentNodes = value.getChildNodes();
+            for (int i = 0; i < contentNodes.getLength(); i++) {
+                return new SimpleEntry(property.getAttribute("NAME"), contentNodes.item(i).getNodeValue());
+            }
+        }
+
+        return null;
+    }
+
 
     @Override
     public SRMFMessageDiff diffMessage(SRMFMessage message) {
