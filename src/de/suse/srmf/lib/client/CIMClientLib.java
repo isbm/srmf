@@ -42,7 +42,6 @@ import de.suse.srmf.lib.client.export.storage.SRMFStorage;
 import de.suse.srmf.lib.client.export.SRMFUtils;
 import de.suse.srmf.lib.client.export.storage.SRMFOrientDBStorage;
 import java.io.File;
-import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -61,12 +60,10 @@ import javax.wbem.client.UserPrincipal;
 import javax.wbem.client.WBEMClient;
 import javax.wbem.client.WBEMClientConstants;
 import javax.wbem.client.WBEMClientFactory;
-import javax.xml.parsers.ParserConfigurationException;
 import org.sblim.cimclient.CIMXMLTraceListener;
 import org.sblim.cimclient.internal.cimxml.CIMClientXML_HelperImpl;
 import org.sblim.cimclient.internal.cimxml.CimXmlSerializer;
 import org.sblim.cimclient.internal.logging.LogAndTraceBroker;
-import org.xml.sax.SAXException;
 
 
 
