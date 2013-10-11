@@ -51,6 +51,8 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import javax.xml.transform.stream.StreamSource;
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
@@ -330,5 +332,34 @@ public class SRMFUtils {
         }
 
         stream.println(new CLITablePrint(table));
+    }
+    
+    /**
+     * Extracts "foo" from <bar>foo</bar> node.
+     * Concatenates all the text in child nodes, i.e. produces "foobar"
+     * from <bar>foo<foo>bar</foo></bar>.
+     * 
+     * @param node
+     * @return 
+     */
+    public static StringBuilder getDOMElementText(Node node, StringBuilder buffer, String separator) {
+        if (buffer == null) {
+            buffer = new StringBuilder();
+        }
+        
+        NodeList children = node.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node contentNode = children.item(i);
+            if (contentNode.getNodeType() == Document.TEXT_NODE) {
+                buffer.append(contentNode.getNodeValue());
+                if (separator != null) {
+                    buffer.append(separator);
+                }
+            } else {
+                buffer = SRMFUtils.getDOMElementText(contentNode, buffer, separator);
+            }
+        }
+
+        return buffer;
     }
 }
