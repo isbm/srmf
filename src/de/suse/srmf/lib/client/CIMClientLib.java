@@ -50,8 +50,12 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.cim.CIMClass;
+import javax.cim.CIMClassProperty;
+import javax.cim.CIMDataType;
 import javax.cim.CIMInstance;
 import javax.cim.CIMObjectPath;
+import javax.cim.CIMProperty;
 import javax.security.auth.Subject;
 import javax.wbem.CloseableIterator;
 import javax.wbem.WBEMException;
@@ -456,6 +460,23 @@ public class CIMClientLib {
         }
         this.traceMode = false;
     }
+    
+    @SuppressWarnings("empty-statement")
+    public void doClassAssociationMap(String className) throws WBEMException {
+        CIMObjectPath path = new CIMObjectPath("https", "g34.suse.de", "5989", "root/cimv2", className, null);
+        CloseableIterator<CIMObjectPath> x = this.client.enumerateInstanceNames(path);
+        while (x.hasNext()) {
+            CIMObjectPath objp = x.next();
+            System.err.println("Name: " + objp);
+            CloseableIterator<CIMObjectPath> associations = this.client.associatorNames(objp, null, null, null, null);
+            System.err.println("Associations: " + associations);
+            while (associations.hasNext()) {
+                System.err.println("Association: " + associations.next());
+            }
+            associations.close();
+        }
+        x.close();
+    }
 
     /**
      * Serialize CIM instance.
@@ -558,7 +579,7 @@ public class CIMClientLib {
             } else if (params.containsKey("query")) {
                 cimclient.doQuery(params.get("query")[0]);
             } else if (params.containsKey("test")) {
-                cimclient.doEnumerateClassInstances(params.get("test")[0]);
+                cimclient.doClassAssociationMap(params.get("test")[0]);
             } else {
                 CIMClientLib.usage();
                 System.err.println("Error:\n\tWrong parameters.");
