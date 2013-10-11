@@ -46,6 +46,7 @@ public class SRMFMessage {
     private String baseClassName;
     private String className;
     private Document document;
+    private String hostname;
 
     /**
      * Constructor for the SRMF Message.
@@ -54,16 +55,24 @@ public class SRMFMessage {
      * @param className
      * @param source 
      */
-    public SRMFMessage(String objectId, String baseClassName, String className, String source)
+    public SRMFMessage(String hostname, String objectId, String baseClassName, String className, String source)
             throws ParserConfigurationException,
                    SAXException,
                    IOException {
+        this.hostname = hostname;
         this.objectId = objectId;
         this.baseClassName = baseClassName;
         this.className = className;
         this.document = SRMFUtils.getXMLDocumentFromString(source);
     }
 
+    /**
+     * Hostname.
+     * @return 
+     */
+    public String getHostname() {
+        return hostname;
+    }
     
     /**
      * Get object ID.
