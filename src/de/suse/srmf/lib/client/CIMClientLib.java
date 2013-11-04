@@ -52,10 +52,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.cim.CIMClass;
 import javax.cim.CIMClassProperty;
-import javax.cim.CIMDataType;
 import javax.cim.CIMInstance;
 import javax.cim.CIMObjectPath;
-import javax.cim.CIMProperty;
+import javax.cim.CIMQualifier;
 import javax.security.auth.Subject;
 import javax.wbem.CloseableIterator;
 import javax.wbem.WBEMException;
@@ -147,6 +146,8 @@ public class CIMClientLib {
     private SRMFRenderMap exportSRMFRenderMap;
     private List<SRMFRenderMap.SRMFMapDestination.SRMFMapRef.SRMFRender> currentSRMFMapRefID;
     private SRMFMessageMeta currentSRMFMessageMeta;
+    
+    private CIMObjectMapper objectMapper;
 
 
     /**
@@ -244,6 +245,9 @@ public class CIMClientLib {
         subj.getPrincipals().add(new UserPrincipal(this.setup.getUsername(hostname)));
         subj.getPrivateCredentials().add(new PasswordCredential(this.setup.getPassword(hostname)));
         this.client.initialize(path, subj, new Locale[]{Locale.US});
+
+        // Mixins
+        this.objectMapper = new CIMObjectMapper(this.client, this.namespace);
     }
 
 
@@ -264,6 +268,7 @@ public class CIMClientLib {
      */
     public void setNamespace(String namespace) {
         this.namespace = namespace;
+        this.objectMapper.setNamespace(namespace);
     }
 
     /**
@@ -478,22 +483,33 @@ public class CIMClientLib {
         }
         this.traceMode = false;
     }
-    
+
+    /*
     @SuppressWarnings("empty-statement")
-    public void doClassAssociationMap(String className) throws WBEMException {
+    public void doClassAssociationMap_(String className, int shift) throws WBEMException {
         CloseableIterator<CIMObjectPath> instanceNames = this.enumerateInstanceNames(className, null);
         while (instanceNames.hasNext()) {
             CIMObjectPath objPth = instanceNames.next();
-            System.err.println("Object: " + objPth.getObjectName());
             CloseableIterator<CIMObjectPath> associations = this.client.associatorNames(objPth, null, null, null, null);
             while (associations.hasNext()) {
                 CIMObjectPath refObjPth = associations.next();
-                System.err.println("Association: " + refObjPth.getObjectName());
+                this.doClassAssociationMap_(refObjPth.getObjectName(), shift++);
             }
             associations.close();
         }
         instanceNames.close();
     }
+    */
+
+
+    private void doClassAssociationMap(String className) {
+        try {
+            this.objectMapper.explainClass(className);
+        } catch (WBEMException ex) {
+            Logger.getLogger(CIMClientLib.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
 
     /**
      * Serialize CIM instance.
