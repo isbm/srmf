@@ -11,6 +11,40 @@
       <render id="cim-httpd-set-docroot-cfengine" out="file:httpd_set_document_root.cf" />
     </ref>
   </destination>
+
+  <!--
+    Example of complex data processing from multiple sources and stylesheets.
+    Lifecycle attributes: 
+       volatile   - File is only created, but never refreshed. To refresh, remove it first.
+       temporary  - File is always created again.
+  -->
+  <destination name="kiwi" title="Export to Kiwi configuration for clone">
+    <!-- This does the trick -->
+    <merge id="kiwi-export" out="file:kiwi-basic-clone-configuration.xml">
+      <!-- Get list of the packages -->
+      <ref id="software-identity">
+	<render id="cim-installed-packages-kiwi"
+		out="file:kiwi-clone-installed-packages.xml"
+		lifecycle="temporary" />
+      </ref>
+      
+      <!-- Get preferences section -->
+      <ref id="os-description">
+	<render id="cim-description-kiwi"
+		out="file:kiwi-clone-os-description.xml"
+		lifecycle="temporary" />
+      </ref>
+      
+      <!-- Get repository section for repository URL, type, name, location etc -->
+      <ref id="packages-repository">
+	<render id="cim-description-kiwi"
+		out="file:kiwi-clone-package-repository.xml"
+		lifecycle="temporary" />
+      </ref>
+    </merge>
+  </destination>
+
+  <!-- Export to the plain text, for fun :) -->
   <destination name="text" title="ASCII plain text">
     <ref id="process-list" render="cim-process-text">
       <render id="cim-process-text" out="console:stdout"/>
