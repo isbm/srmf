@@ -78,15 +78,21 @@ public class CIMObjectMapper {
         }
 
         HashMap meaningMap = new HashMap();
-        if (mapKeys.length == mapValues.length) {
-            for (int i = 0; i < mapKeys.length; i++) {
-                meaningMap.put(mapKeys[i], mapValues[i]);
+        if (mapKeys != null && mapValues != null) {
+            if (mapKeys.length == mapValues.length) {
+                for (int i = 0; i < mapKeys.length; i++) {
+                    meaningMap.put(mapKeys[i], mapValues[i]);
+                }
+            } else {
+                System.err.println("Unable to extract map from the description: amount of keys is not amout of values.");
             }
-        } else {
-            System.err.println("Unable to extract map from the description: amount of keys is not amout of values.");
         }
         
-        return meaningMap.get(property.getValue().toString());
+        if (property.getValue() != null) {
+            return meaningMap.get(property.getValue().toString());
+        } else {
+            return "N/A";
+        }
     }
 
 
@@ -107,7 +113,7 @@ public class CIMObjectMapper {
             System.err.println("    Status:");
             for (int i = 0; i < cIMClassPropertys.length; i++) {
                 CIMClassProperty prop = cIMClassPropertys[i];
-                if (prop.getValue() != null) {
+                if (prop.getValue() != null) { // show all
                     System.err.println("        " + prop.getName() + " is " + this.getDataMeaning(prop));
                 }
             }

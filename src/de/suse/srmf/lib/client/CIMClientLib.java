@@ -623,6 +623,7 @@ public class CIMClientLib {
             }
 
             System.err.println("Error: " + ex.getLocalizedMessage());
+            ex.printStackTrace();
         }
     }
 }
