@@ -1,0 +1,14 @@
+[ Description("Return OS owner data")]
+class SUSE_SystemOwner : CIM_Person {
+      [Description (
+          "Name of the owner of the installed OS" )]
+      string OwnerName;
+
+      [Description (
+          "Returns the contact of owner of the installed OS" )]
+      string OwnerContact;
+
+      [Description (
+          "Describes the owner of the installed OS" )]
+      string OwnerDescription;
+};

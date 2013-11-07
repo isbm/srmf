@@ -595,8 +595,8 @@ public class CIMClientLib {
         // Run! :)
         try {
             CIMClientLib cimclient = new CIMClientLib(params.get("hostname")[0], 
-                                                      SRMFConfig.initialize(params.get("config") != null ? params.get("config")[0] : null),
-                                                      params.get("index-url") != null ? new URL(params.get("index-url")[0]) : null);
+                    SRMFConfig.initialize(params.get("config") != null ? params.get("config")[0] : null),
+                    params.get("index-url") != null ? new URL(params.get("index-url")[0]) : null);
             cimclient.setNamespace(params.get("namespace")[0]);
             
             if (params.containsKey("snapshot")) {
