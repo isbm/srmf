@@ -1,0 +1,24 @@
+instance of PG_ProviderModule
+{
+    Name = "pyCmpiProvider_SUSE_SystemOwner";
+    InterfaceType = "CMPI";
+    InterfaceVersion = "2.0.0";
+    Location = "pyCmpiProvider"; 
+    UserContext = 2; // Requestor
+    Vendor = "TODO"; // TODO
+    Version = "1.0";
+}; 
+instance of PG_Provider
+{
+    Name = "SUSE_SystemOwner"; 
+    ProviderModuleName = "pyCmpiProvider_SUSE_SystemOwner";
+}; 
+instance of PG_ProviderCapabilities
+{
+    CapabilityID = "SUSE_SystemOwner";
+    ProviderModuleName = "pyCmpiProvider_SUSE_SystemOwner";
+    ProviderName = "SUSE_SystemOwner";
+    ClassName = "SUSE_SystemOwner";
+    Namespaces = {"root/cimv2"}; // TODO
+    ProviderType = {2}; // Instance
+};

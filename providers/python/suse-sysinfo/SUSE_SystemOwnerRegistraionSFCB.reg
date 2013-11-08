@@ -1,0 +1,5 @@
+[SUSE_SystemOwner]
+   provider: SUSE_SystemOwner
+   location: pyCmpiProvider
+   type: instance
+   namespace: root/cimv2
