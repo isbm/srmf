@@ -87,7 +87,7 @@ class SUSE_SystemOwner(CIMProvider2):
         owner = Owner()
         if self._meta:
             # Takes only first owner
-            for owner_node in d.getElementsByTagName("node")[0].getElementsByTagName("owner"):
+            for owner_node in self._meta.getElementsByTagName("node")[0].getElementsByTagName("owner"):
                 owner.name = self.get_dom_value(owner_node, "name")
                 owner.contact.email = self.get_dom_value(owner_node, "email")
                 owner.memo = self.get_dom_value(owner_node, "memo")
