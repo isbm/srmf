@@ -1,23 +1,128 @@
-"""Python Provider for SUSE_SystemOwner
+#
+# Author: Bo Maryniuk <bo@suse.de>
+#
+# The BSD 3-Clause License
+# Copyright (c) 2013, SUSE Linux Products GmbH
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met: 
+# 
+# * Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+#
+# * Redistributions in binary form must reproduce the above copyright notice, this
+#   list of conditions and the following disclaimer in the documentation and/or
+#   other materials provided with the distribution.
+#
+# * Neither the name of the SUSE Linux Products GmbH nor the names of its contributors may
+#   be used to endorse or promote products derived from this software without
+#   specific prior written permission.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-Instruments the CIM class SUSE_SystemOwner
-
-"""
 
 import pywbem
+import locale
+import socket
+
+from xml.dom import minidom as dom
+import os
 from pywbem.cim_provider2 import CIMProvider2
+
+
+class Contact:
+    """
+    Contact element.
+    """
+    def __init__(self):
+        self.email = ""
+
+
+class Owner:
+    """
+    Owner element.
+    """
+    def __init__(self):
+        self.name = ""
+        self.contact = Contact()
+        self.memo = ""
+        self.description = ""
+
 
 class SUSE_SystemOwner(CIMProvider2):
     """Instrument the CIM class SUSE_SystemOwner 
-
-    Return OS owner data
-    
+    Return OS owner data.
     """
+    SRMF_CMDB_MAP = "/etc/srmf/cmdb.map"
+    _meta = None
+
+    def get_system_locale(self):
+        """
+        Get current system locale.
+        """
+        lc = locale.getdefaultlocale()[0].split("_")
+        if len(lc) != 2:
+            lc = ["en", "US"]
+
+        return lc
+
+
+    def get_node_owner(self):
+        """
+        Get node owner meta information from the SRMF.CMDB map.
+        """
+        if (not self._meta and os.path.exists(self.SRMF_CMDB_MAP)):
+            self._meta = dom.parse(self.SRMF_CMDB_MAP)
+
+        owner = Owner()
+        if self._meta:
+            # Takes only first owner
+            for owner_node in d.getElementsByTagName("node")[0].getElementsByTagName("owner"):
+                owner.name = self.get_dom_value(owner_node, "name")
+                owner.contact.email = self.get_dom_value(owner_node, "email")
+                owner.memo = self.get_dom_value(owner_node, "memo")
+                owner.description = "ToDO"
+                break
+
+        return owner
+
+
+    def get_dom_value(self, doc, tag):
+        """
+        Get element value.
+           Examples:
+               <a>value-here</a>
+               <b><![CDATA[ another value here ]]></b>
+        """
+        node = doc.getElementsByTagName(tag)
+        value = []
+        for n in node:
+            for cn in n.childNodes:
+                v = None
+                if cn.nodeType == dom.Document.CDATA_SECTION_NODE:
+                    v = (cn.nodeValue + "").strip()
+                elif cn.nodeType == dom.Document.TEXT_NODE:
+                    v = (cn.nodeValue + "").strip()
+                if v:
+                    value.append(v)
+        return '\n'.join(value)
+
 
     def __init__ (self, env):
         logger = env.get_logger()
         logger.log_debug('Initializing provider %s from %s' \
                 % (self.__class__.__name__, __file__))
+
 
     def get_instance(self, env, model):
         """Return an instance.
@@ -46,6 +151,8 @@ class SUSE_SystemOwner(CIMProvider2):
         logger.log_debug('Entering %s.get_instance()' \
                 % self.__class__.__name__)
         
+        lc = self.get_system_locale()
+        owner = self.get_node_owner()
 
         # TODO fetch system resource matching the following keys:
         #   model['CreationClassName']
@@ -54,7 +161,7 @@ class SUSE_SystemOwner(CIMProvider2):
         #model['BusinessCategory'] = '' # TODO 
         #model['Caption'] = '' # TODO 
         #model['CommonName'] = '' # TODO (Required)
-        #model['Description'] = '' # TODO 
+        model['Description'] = owner.memo
         #model['ElementName'] = '' # TODO 
         #model['EmployeeNumber'] = '' # TODO 
         #model['EmployeeType'] = '' # TODO 
@@ -64,24 +171,25 @@ class SUSE_SystemOwner(CIMProvider2):
         #model['HomePostalAddress'] = ['',] # TODO 
         #model['InstanceID'] = '' # TODO 
         #model['JPEGPhoto'] = '' # TODO 
-        #model['LocalityName'] = '' # TODO 
-        #model['Mail'] = '' # TODO 
+        model['LocalityName'] = lc[-1]
+        model['Mail'] = "root@" + socket.gethostname()
         #model['Manager'] = '' # TODO 
         #model['Mobile'] = '' # TODO 
         #model['OU'] = '' # TODO 
-        #model['OwnerContact'] = '' # TODO 
-        #model['OwnerDescription'] = '' # TODO 
-        #model['OwnerName'] = '' # TODO 
+        model['OwnerContact'] = owner.contact.email
+        model['OwnerDescription'] = owner.description
+        model['OwnerName'] = owner.name
         #model['Pager'] = '' # TODO 
         #model['PostalAddress'] = ['',] # TODO 
         #model['PostalCode'] = '' # TODO 
-        #model['PreferredLanguage'] = '' # TODO 
+        model['PreferredLanguage'] = lc[0]
         #model['Secretary'] = '' # TODO 
         #model['StateOrProvince'] = '' # TODO 
         #model['Surname'] = '' # TODO (Required)
         #model['TelephoneNumber'] = '' # TODO 
         #model['Title'] = '' # TODO 
         #model['UserID'] = '' # TODO 
+
         return model
 
 
@@ -161,10 +269,8 @@ class SUSE_SystemOwner(CIMProvider2):
         """
 
         logger = env.get_logger()
-        logger.log_debug('Entering %s.set_instance()' \
-                % self.__class__.__name__)
-        # TODO create or modify the instance
-        raise pywbem.CIMError(pywbem.CIM_ERR_NOT_SUPPORTED) # Remove to implement
+        logger.log_debug('Entering %s.set_instance()' % self.__class__.__name__)
+        raise pywbem.CIMError(pywbem.CIM_ERR_ACCESS_DENIED)
         return instance
 
 
@@ -191,16 +297,10 @@ class SUSE_SystemOwner(CIMProvider2):
         """ 
 
         logger = env.get_logger()
-        logger.log_debug('Entering %s.delete_instance()' \
-                % self.__class__.__name__)
-
-        # TODO delete the resource
-        raise pywbem.CIMError(pywbem.CIM_ERR_NOT_SUPPORTED) # Remove to implement
+        logger.log_debug('Entering %s.delete_instance()' % self.__class__.__name__)
+        raise pywbem.CIMError(pywbem.CIM_ERR_ACCESS_DENIED)
         
-## end of class SUSE_SystemOwnerProvider
-    
-## get_providers() for associating CIM Class Name to python provider class name
-    
+
 def get_providers(env): 
     suse_systemowner_prov = SUSE_SystemOwner(env)  
     return {'SUSE_SystemOwner': suse_systemowner_prov}
