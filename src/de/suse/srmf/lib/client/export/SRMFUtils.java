@@ -350,7 +350,8 @@ public class SRMFUtils {
         NodeList children = node.getChildNodes();
         for (int i = 0; i < children.getLength(); i++) {
             Node contentNode = children.item(i);
-            if (contentNode.getNodeType() == Document.TEXT_NODE) {
+            if (contentNode.getNodeType() == Document.TEXT_NODE || 
+                contentNode.getNodeType() == Document.CDATA_SECTION_NODE) {
                 buffer.append(contentNode.getNodeValue());
                 if (separator != null) {
                     buffer.append(separator);

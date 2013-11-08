@@ -32,6 +32,7 @@
 
 package de.suse.srmf.lib.client;
 
+import de.suse.srmf.lib.client.cmdb.CMDBOperations;
 import de.suse.srmf.lib.client.export.ExportDispatcher;
 import de.suse.srmf.lib.client.export.RichArrayList;
 import de.suse.srmf.lib.client.export.storage.SRMFLocalStorage;
@@ -541,9 +542,17 @@ public class CIMClientLib {
 
         System.err.println("\nExport:");
         System.err.println("\t--export=<value>\t\tExport for deployment with particular CMS.");
-        System.err.println("\t--output-path\t\tSpecify custom output path for export.");
+        System.err.println("\t--output-path\t\t\tSpecify custom output path for export.");
         System.err.println("\t--snapshot\t\t\tSnapshot current service manifest.");
         System.err.println("\t--available-cms\t\t\tList of supported CMS.");
+        
+        System.err.println("\nCMDB:");
+        System.err.println("\t--cmdb-info=<targets>\t\tComma separated targets to get.");
+        System.err.println("\n\t\t\t\t\tTargets:");
+        System.err.println("\t\t\t\t\towner\t\tOwner description");
+        System.err.println("\t\t\t\t\tpkgapps\t\tPackaged applications");
+        System.err.println("\t\t\t\t\trawapps\t\tUnpackaged, custom applications");
+        System.err.println("\t\t\t\t\tallapps\t\tAll applications");
 
         System.err.println("\nOther:");
         System.err.println("\t--trace\t\t\t\tShow extended tracebacks of errors.");
@@ -578,6 +587,7 @@ public class CIMClientLib {
                                   new String[]{"hostname"},
                                   new String[]{"describe", "show-classes", 
                                                "export", "available-cms",
+                                               "cmdb-info", "cmdb-write",
                                                "snapshot", "test", "query"});
         } catch (Exception ex) {
             System.err.println("Error: " + ex.getLocalizedMessage());
@@ -594,6 +604,13 @@ public class CIMClientLib {
 
         // Run! :)
         try {
+            CMDBOperations cmdb = null;
+            try {
+                cmdb = new CMDBOperations();
+            } catch (Exception ex) {
+                System.err.println("CMDB Warning: " + ex.getLocalizedMessage()); // XXX: This should at least create an empty map in /etc/srmf instead.
+            }
+            
             CIMClientLib cimclient = new CIMClientLib(params.get("hostname")[0], 
                     SRMFConfig.initialize(params.get("config") != null ? params.get("config")[0] : null),
                     params.get("index-url") != null ? new URL(params.get("index-url")[0]) : null);
@@ -611,6 +628,20 @@ public class CIMClientLib {
                 cimclient.doEnumerateClasses();
             } else if (params.containsKey("query")) {
                 cimclient.doQuery(params.get("query")[0]);
+            } else if (params.containsKey("cmdb-info")) {
+                if (cmdb != null) {
+                    String[] targets = params.get("cmdb-info");
+                    for (int i = 0; i < targets.length; i++) {
+                        if (targets[i].equals("owner")) {
+                            cmdb.doGetOwnerInformation();
+                        } else {
+                            System.err.println("Error:\n\ttarget " + targets[i] + " is not supported.");
+                            System.exit(0);
+                        }
+                    }
+                } else {
+                    System.err.println("CMDB tool is not available at the moment.");
+                }
             } else if (params.containsKey("test")) {
                 cimclient.doClassAssociationMap(params.get("test")[0]);
             } else {

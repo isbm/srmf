@@ -160,7 +160,7 @@ class SUSE_SystemOwner(CIMProvider2):
 
         #model['BusinessCategory'] = '' # TODO 
         #model['Caption'] = '' # TODO 
-        #model['CommonName'] = '' # TODO (Required)
+        model['CommonName'] = 'Owner'
         model['Description'] = owner.memo
         #model['ElementName'] = '' # TODO 
         #model['EmployeeNumber'] = '' # TODO 
@@ -185,7 +185,7 @@ class SUSE_SystemOwner(CIMProvider2):
         model['PreferredLanguage'] = lc[0]
         #model['Secretary'] = '' # TODO 
         #model['StateOrProvince'] = '' # TODO 
-        #model['Surname'] = '' # TODO (Required)
+        model['Surname'] = owner.name
         #model['TelephoneNumber'] = '' # TODO 
         #model['Title'] = '' # TODO 
         #model['UserID'] = '' # TODO 
