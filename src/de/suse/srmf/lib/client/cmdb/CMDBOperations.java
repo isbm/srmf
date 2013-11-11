@@ -31,16 +31,13 @@
 
 package de.suse.srmf.lib.client.cmdb;
 
-import com.hazelcast.instance.TerminatedLifecycleService;
 import de.suse.srmf.lib.client.export.SRMFUtils;
 import java.net.URISyntaxException;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  *
