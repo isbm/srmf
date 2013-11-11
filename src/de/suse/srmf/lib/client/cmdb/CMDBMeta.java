@@ -36,6 +36,8 @@ import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -70,12 +72,32 @@ public class CMDBMeta {
      * Get system owner.
      * @return
      */
-    public SystemOwner getSystemOwner() throws Exception {
-        SystemOwner owner = new SystemOwner();
-        Element node = this.getComputerSystemNode();
-        owner.setFullName(SRMFUtils.getDOMElementText(node.getElementsByTagName("name").item(0), null, null).toString());
-        owner.setMemo(SRMFUtils.getDOMElementText(node.getElementsByTagName("memo").item(0), null, null).toString());
-        owner.getContact().setEmail(SRMFUtils.getDOMElementText(node.getElementsByTagName("email").item(0), null, null).toString());
+    public EntityOwner getSystemOwner() throws Exception {
+        return this.getEntityOwner(this.getComputerSystemNode());
+    }
+
+
+    /**
+     * Get entity owner object from the node.
+     * @param node
+     * @return 
+     */
+    private EntityOwner getEntityOwner(Element node) {
+        EntityOwner owner = new EntityOwner();
+        NodeList nl = node.getElementsByTagName("name");
+        if (nl != null && nl.getLength() > 0) {
+            owner.setFullName(SRMFUtils.getDOMElementText(nl.item(0), null, null).toString());
+        }
+        
+        nl = node.getElementsByTagName("memo");
+        if (nl != null && nl.getLength() > 0) {
+            owner.setMemo(SRMFUtils.getDOMElementText(nl.item(0), null, null).toString());
+        }
+        
+        nl = node.getElementsByTagName("email");
+        if (nl != null && nl.getLength() > 0) {
+            owner.getContact().setEmail(SRMFUtils.getDOMElementText(nl.item(0), null, null).toString());
+        }
 
         return owner;
     }
@@ -95,6 +117,97 @@ public class CMDBMeta {
      * Save data of the system owner.
      * @param owner 
      */
-    public void setSystemOwner(SystemOwner owner) {
+    public void setSystemOwner(EntityOwner owner) {
+    }
+
+
+    /**
+     * Get packaged applications.
+     * 
+     * @return 
+     */
+    public List<PackagedApplication> getPackagedApps() {
+        List<PackagedApplication> packagedApps = new ArrayList<PackagedApplication>();
+        NodeList apps = this.meta.getElementsByTagName("application");
+        for (int i = 0; i < apps.getLength(); i++) {
+            try {
+                Element app = (Element) apps.item(i);
+                PackagedApplication packagedApplication = new PackagedApplication(app.getAttribute("id"));
+                
+                // Get only packaged apps
+                NodeList packages = app.getElementsByTagName("package");
+                if (packages.getLength() > 0) {
+                    // Add packages
+                    for (int pkgIdx = 0; pkgIdx < packages.getLength(); pkgIdx++) {
+                        packagedApplication.addPackage(((Element) packages.item(pkgIdx)).getAttribute("id"));
+                    }
+                    
+                    // Get owners
+                    NodeList owners = app.getElementsByTagName("owner");
+                    for (int ownerIdx = 0; ownerIdx < owners.getLength(); ownerIdx++) {
+                        packagedApplication.addOwner(this.getEntityOwner((Element) owners.item(ownerIdx)));
+                    }
+                    packagedApps.add(packagedApplication);
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                System.err.println("Error getting application: " + ex.getLocalizedMessage());
+            }
+        }
+
+        return packagedApps;
+    }
+
+
+    /**
+     * Get raw applications.
+     * 
+     * @return 
+     */
+    public List<RawApplication> getRawApplications() {
+        List<RawApplication> rawApps = new ArrayList<RawApplication>();
+        NodeList apps = this.meta.getElementsByTagName("application");
+        for (int i = 0; i < apps.getLength(); i++) {
+            try {
+                Element app = (Element) apps.item(i);
+                RawApplication rawApplication = new RawApplication(app.getAttribute("id"));
+                
+                // Get only packaged apps
+                NodeList packages = app.getElementsByTagName("package");
+                if (packages.getLength() == 0) {                    
+                    // Get owners
+                    NodeList elements = app.getElementsByTagName("owner");
+                    for (int ownerIdx = 0; ownerIdx < elements.getLength(); ownerIdx++) {
+                        rawApplication.addOwner(this.getEntityOwner((Element) elements.item(ownerIdx)));
+                    }
+                    
+                    elements = app.getElementsByTagName("description");
+                    if (elements != null && elements.getLength() > 0) {
+                        rawApplication.setDescription(SRMFUtils.getDOMElementText(elements.item(0), null, null).toString().trim());
+                    }
+
+                    elements = app.getElementsByTagName("path");
+                    for (int urlIdx = 0; urlIdx < elements.getLength(); urlIdx++) {
+                        Element urlNode = (Element) elements.item(urlIdx);
+                        if (urlNode.getAttribute("type").equals(RawApplication.ConfigurationURL.TYPE_CONFIGURATION)) {
+                            rawApplication.addConfigurationURL(new RawApplication.ConfigurationURL(
+                                    urlNode.getAttribute("url"), urlNode.getAttribute("type")));
+                        } else if (urlNode.getAttribute("type").equals(RawApplication.ConfigurationURL.TYPE_DATA)) {
+                            rawApplication.addDataURL(new RawApplication.ConfigurationURL(
+                                    urlNode.getAttribute("url"), urlNode.getAttribute("type")));                            
+                        } else if (urlNode.getAttribute("type").equals(RawApplication.ConfigurationURL.TYPE_LOG)) {
+                            rawApplication.addLogURL(new RawApplication.ConfigurationURL(
+                                    urlNode.getAttribute("url"), urlNode.getAttribute("type")));                            
+                        }
+                    }
+                    
+                    rawApps.add(rawApplication);
+                }
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                System.err.println("Error getting application: " + ex.getLocalizedMessage());
+            }
+        }
+        return rawApps;
     }
 }

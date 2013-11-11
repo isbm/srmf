@@ -630,15 +630,7 @@ public class CIMClientLib {
                 cimclient.doQuery(params.get("query")[0]);
             } else if (params.containsKey("cmdb-info")) {
                 if (cmdb != null) {
-                    String[] targets = params.get("cmdb-info");
-                    for (int i = 0; i < targets.length; i++) {
-                        if (targets[i].equals("owner")) {
-                            cmdb.doGetOwnerInformation();
-                        } else {
-                            System.err.println("Error:\n\ttarget " + targets[i] + " is not supported.");
-                            System.exit(0);
-                        }
-                    }
+                    cmdb.doGetInfo(params.get("cmdb-info"));
                 } else {
                     System.err.println("CMDB tool is not available at the moment.");
                 }
@@ -654,7 +646,7 @@ public class CIMClientLib {
             }
 
             System.err.println("Error: " + ex.getLocalizedMessage());
-            ex.printStackTrace();
+            //ex.printStackTrace();
         }
     }
 }

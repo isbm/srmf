@@ -31,73 +31,83 @@
 
 package de.suse.srmf.lib.client.cmdb;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 /**
  *
  * @author bo
  */
-public class SystemOwner {
-    
-    /**
-     * Contact block.
-     */
-    public static class Contact {
-        private String email;
-        public Contact() {}
+public class PackagedApplication {
+    private String id;
+    private final List<EntityOwner> owners; // At least one owner.
+    private final List<String> packages;
 
-        /**
-         * Set contact's email.
-         * @param email 
-         */
-        public void setEmail(String email) {
-            this.email = email != null ? email.trim() : "";
-        }
-
-        /**
-         * Get contact's email.
-         * @return 
-         */
-        public String getEmail() {
-            return email;
-        }
-    }
-
-    private String ownerName;
-    private SystemOwner.Contact contact;
-    private String memo;
-    private String description;
 
     /**
      * Constructor.
      */
-    public SystemOwner() {
-        this.contact = new Contact();
+    public PackagedApplication(String id) throws Exception {
+        if (id == null || id.trim().isEmpty()) {
+            throw new Exception("Application ID cannot be empty.");
+        }
+        this.id = id;
+        this.packages = new ArrayList<String>();
+        this.owners = new ArrayList<EntityOwner>();
     }
 
-    public Contact getContact() {
-        return contact;
+    
+    /**
+     * Get app ID.
+     * 
+     * @return 
+     */
+    public String getId() {
+        return id;
+    }
+    
+
+    /**
+     * Add owner.
+     * 
+     * @param owner 
+     */
+    public void addOwner(EntityOwner owner) {
+        this.owners.add(owner);
     }
 
-    public void setDescription(String description) {
-        this.description = description != null ? description.trim() : "";
+
+    /**
+     * Add package.
+     * 
+     * @param packageId 
+     */
+    public void addPackage(String packageId) {
+        this.packages.add(packageId);
+    }
+    
+
+    /**
+     * Get owners of the application.
+     * 
+     * @return 
+     */
+    public List<EntityOwner> getOwners() {
+        return Collections.unmodifiableList(this.owners);
     }
 
-    public String getDescription() {
-        return description;
-    }
 
-    public void setMemo(String memo) {
-        this.memo = memo != null ? memo.trim() : "";
-    }
-
-    public String getMemo() {
-        return memo;
-    }
-
-    public void setFullName(String ownerName) {
-        this.ownerName = ownerName != null ? ownerName.trim() : "";
-    }
-
-    public String getFullName() {
-        return ownerName;
+    /**
+     * Get packages.
+     * 
+     * @return 
+     */
+    public List<String> getPackages() {
+        return Collections.unmodifiableList(this.packages);
     }
 }
+
+
+
+

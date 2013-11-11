@@ -3,58 +3,59 @@
    Meta information for the Application Management.
 -->
 <cmdb-meta>
-  <!-- Node iteself -->
-  <node>
-    <owner>
-      <name>John Smith</name>
-      <contact>
-	<email>john.smith@enterprise.com</email>
-      </contact>
-      <memo><![CDATA[
+    <!-- Node iteself -->
+    <node>
+        <owner>
+            <name>John Smith</name>
+            <contact>
+                <email>john.smith@enterprise.com</email>
+            </contact>
+            <memo><![CDATA[
 Contact John Smith only for itself node issues. Applications are owned by others.
 ]]>
-      </memo>
-    </owner>
-  </node>
+            </memo>
+        </owner>
+    </node>
 
-  <!-- Applications on the node -->
-  <applications>
-    <!-- Who-knows-what app -->
-    <application id="some.app.here">
-      <owner>
-	<name>Vasia Pupkin</name>
-	<contact>
-	  <email>vasia@pupkin.com</email>
-	</contact>
-      </owner>
-      <description><![CDATA[
+    <!-- Applications on the node -->
+    <applications>
+        <!-- Who-knows-what app -->
+        <application id="some.app.here">
+            <owner>
+                <name>Vasia Pupkin</name>
+                <contact>
+                    <email>vasia@pupkin.com</email>
+                </contact>
+                <memo/>
+            </owner>
+            <description><![CDATA[
 Some app, that just here for nothing. Hehe :)
 ]]>
-      </description>
+            </description>
 
-      <path type="configuration" url="file:///etc/foo.conf" />
-      <path type="configuration" url="file:///etc/bar/*" />
-      <path type="configuration" url="file:///etc/lah/*" />
-      <path type="log" url="file:///var/log/blah/*" />
-      <path type="data" url="file:///opt/datamart/*" />
-    </application>
+            <path type="configuration" url="file:///etc/foo.conf" />
+            <path type="configuration" url="file:///etc/bar/*" />
+            <path type="configuration" url="file:///etc/lah/*" />
+            <path type="log" url="file:///var/log/blah/*" />
+            <path type="data" url="file:///opt/datamart/*" />
+        </application>
 
-    <!--
-       Packaged RPM.
-       It contains only the reference to the packages,
-       needed to the installation.
+        <!--
+         Packaged RPM.
+         It contains only the reference to the packages,
+         needed to the installation.
 
-       It does not contains references to the requred packages.
-      -->
-    <application id="another.app">
-      <owner>
-	<name>Vasia Pupkin</name>
-	<contact>
-	  <email>vasia@pupkin.com</email>
-	</contact>
-      </owner>
-      <package id="another-app" />
-      <package id="another-app-component" />
-    </application>
-  </applications>
+         It does not contains references to the requred packages.
+        -->
+        <application id="another.app">
+            <owner>
+                <name>Vasia Pupkin</name>
+                <contact>
+                    <email>vasia@pupkin.com</email>
+                </contact>
+            </owner>
+            <package id="another-app" />
+            <package id="another-app-component" />
+        </application>
+    </applications>
 </cmdb-meta>

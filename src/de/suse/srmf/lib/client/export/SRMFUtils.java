@@ -363,4 +363,56 @@ public class SRMFUtils {
 
         return buffer;
     }
+    
+
+    /**
+     * Wrap text with prefix.
+     * @param text
+     * @param len
+     * @param prefix
+     * @return 
+     */
+    public static String textWrap(String text, int len, String prefix) {
+        if (text == null) {
+            return "";
+        }
+
+        if (len <= 0 || (prefix + text).length() <= len) {
+            return prefix + text;
+        }
+        System.err.println("...");
+        StringBuilder line = new StringBuilder();
+        List lines = new ArrayList();
+
+        int prfx = 0;
+        if (prefix != null && !prefix.isEmpty()) {
+            prfx = prefix.length();
+        }
+        
+        String[] words = text.split(" ");
+        for (int i = 0; i < words.length; i++) {
+            String word = words[i].trim();
+            if (word.isEmpty()) {
+                continue;
+            }
+            
+            if ((prefix + word).length() <= len) {
+                line.append(prefix).append(word);
+            } else {
+                lines.add(line.toString());
+                line = new StringBuilder();
+            }
+        }
+
+        if (!line.toString().isEmpty()) {
+            lines.add(line.toString());
+        }
+        
+        StringBuilder out = new StringBuilder();
+        for (int i = 0; i < lines.size(); i++) {
+            out.append(lines.get(i)).append("\n");
+        }
+
+        return out.toString().trim();
+    }
 }
