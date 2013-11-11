@@ -553,6 +553,8 @@ public class CIMClientLib {
         System.err.println("\t\t\t\t\tpkgapps\t\tPackaged applications");
         System.err.println("\t\t\t\t\trawapps\t\tUnpackaged, custom applications");
         System.err.println("\t\t\t\t\tallapps\t\tAll applications");
+        System.err.println("\n\t--cmdb-set\t\t\tDescribe main apps interactively.");
+        System.err.println("\t--cmdb-set=<file>\t\tDescribe this node from the other CMDB map.");
 
         System.err.println("\nOther:");
         System.err.println("\t--trace\t\t\t\tShow extended tracebacks of errors.");
@@ -572,7 +574,10 @@ public class CIMClientLib {
         System.setProperty("sblim.wbem.httpPoolSize", "0");
         Map<String, String[]> params = null;
         try {
-            params = SRMFUtils.getArgs(args, "show-classes", "available-cms", "snapshot", "help", "trace");
+            params = SRMFUtils.getArgs(
+                    args, "show-classes", "available-cms",
+                    "snapshot", "help", "trace", "cmdb-set"
+            );
         } catch (Exception ex) {
             System.err.println("Error: " + ex.getLocalizedMessage());
             System.exit(0);
@@ -587,7 +592,7 @@ public class CIMClientLib {
                                   new String[]{"hostname"},
                                   new String[]{"describe", "show-classes", 
                                                "export", "available-cms",
-                                               "cmdb-info", "cmdb-write",
+                                               "cmdb-info", "cmdb-set",
                                                "snapshot", "test", "query"});
         } catch (Exception ex) {
             System.err.println("Error: " + ex.getLocalizedMessage());
@@ -628,11 +633,20 @@ public class CIMClientLib {
                 cimclient.doEnumerateClasses();
             } else if (params.containsKey("query")) {
                 cimclient.doQuery(params.get("query")[0]);
-            } else if (params.containsKey("cmdb-info")) {
-                if (cmdb != null) {
+            } else if (params.containsKey("cmdb-info") || params.containsKey("cmdb-set")) {
+                if (cmdb == null) {
+                    System.err.println("CMDB tool is not available at the moment.");
+                    System.exit(0);
+                }
+
+                if (params.containsKey("cmdb-info")) {
                     cmdb.doGetInfo(params.get("cmdb-info"));
                 } else {
-                    System.err.println("CMDB tool is not available at the moment.");
+                    if (params.get("cmdb-set").length == 0) {
+                        cmdb.doInteractive();
+                    } else {
+                        cmdb.doLoadFromFile();
+                    }
                 }
             } else if (params.containsKey("test")) {
                 cimclient.doClassAssociationMap(params.get("test")[0]);

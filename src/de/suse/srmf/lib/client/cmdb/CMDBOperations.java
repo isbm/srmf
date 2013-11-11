@@ -31,9 +31,16 @@
 
 package de.suse.srmf.lib.client.cmdb;
 
+import com.hazelcast.instance.TerminatedLifecycleService;
 import de.suse.srmf.lib.client.export.SRMFUtils;
 import java.net.URISyntaxException;
+import java.util.AbstractMap.SimpleEntry;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  *
@@ -175,7 +182,80 @@ public class CMDBOperations {
      * 
      * @throws Exception 
      */
-    public void doWriteOwnerInformation() throws Exception {
+    public void doInteractive() throws Exception {
+        final Map result = new HashMap();
+        InteractiveConsole console = new InteractiveConsole("CMDB> ");
+        console.addConsoleCallback(new InteractiveConsole.ConsoleCallback() {
+            private Boolean terminated = false;
+            private Map setup;
+            
+            private Map getSetup() {
+                if (this.setup == null) {
+                    this.setup = new HashMap();
+                    this.setup.put("node/owner/name", "Name of the owner of the current node.");
+                    this.setup.put("node/owner/description", "Description of the owner.");
+                    this.setup.put("node/owner/memo", "Short memo, related to the owner.");
+                    this.setup.put("node/owner/contact/email", "Email address how to contact the owner.");
+                }
+
+                return this.setup;
+            }
+            
+            private SimpleEntry parseCommand(String command) {
+                String[] tokens = command != null ? command.replaceAll("\\s+", " ").split(" ", 3) : new String[]{};
+                if (tokens.length == 3 && tokens[0].equals("set")) {
+                    if (this.getSetup().get(tokens[1]) != null) {
+                        return new SimpleEntry(tokens[1], tokens[2]);
+                    } else {
+                        System.err.println("Unknown target " + tokens[1]);
+                    }
+                } else if (tokens.length > 0 && tokens[0].equals("help")) {
+                    System.err.println("Available targets:");
+                    Iterator keyset = this.getSetup().keySet().iterator();
+                    while (keyset.hasNext()) {
+                        String k = (String) keyset.next();
+                        System.err.println("\t" + k + "\t" + this.getSetup().get(k));
+                    }
+                    System.err.println("");
+                } else if (tokens.length > 0 && tokens[0].equals("save")) {
+                    return new SimpleEntry("_saved", "_saved");
+                } else if (tokens.length > 0 && tokens[0].equals("done")) {
+                    System.err.println("Bye!");
+                    this.terminated = Boolean.TRUE;
+                } else {
+                    System.err.println("Unknown command: " + tokens[0]);
+                    System.err.println("Usage: set <key> <value>");
+                    System.err.println("       help\n");
+                }
+
+                return null;
+            }
+
+            @Override
+            public void onCommand(String command) {
+                SimpleEntry cmd = this.parseCommand(command);
+                if (cmd != null) {
+                    result.put(cmd.getKey(), cmd.getValue());
+                    if (!cmd.getKey().toString().equals("_saved")) {
+                        result.remove("_saved");
+                    }
+                }
+            }
+
+            @Override
+            public Boolean isTerminated() {
+                return this.terminated;
+            }
+        });
+        
+        console.run();
+        // Process
+        if (result.get("_saved") != null) {
+            result.remove("_saved");
+            System.err.println("Result: " + result);
+        } else {
+            System.err.println("Note: changes were not saved. Please issue \"save\" command before \"done\".");
+        }
     }
 
 
@@ -184,6 +264,7 @@ public class CMDBOperations {
      * 
      * @throws Exception 
      */
-    public void doWriteApplication() throws Exception {
+    public void doLoadFromFile() throws Exception {
+        System.err.println("Load from the file is not yet implemented. :-(");
     }
 }
