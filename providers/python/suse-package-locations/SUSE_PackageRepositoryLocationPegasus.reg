@@ -1,0 +1,25 @@
+// Pegasus Provider registration for SUSE_PackageRepositoryLocation
+instance of PG_ProviderModule
+{
+    Name = "pyCmpiProvider_SUSE_PackageRepositoryLocation";
+    InterfaceType = "CMPI";
+    InterfaceVersion = "2.0.0";
+    Location = "pyCmpiProvider"; 
+    UserContext = 2; // Requestor
+    Vendor = "TODO"; // TODO
+    Version = "1.0";
+}; 
+instance of PG_Provider
+{
+    Name = "SUSE_PackageRepositoryLocation"; 
+    ProviderModuleName = "pyCmpiProvider_SUSE_PackageRepositoryLocation";
+}; 
+instance of PG_ProviderCapabilities
+{
+    CapabilityID = "SUSE_PackageRepositoryLocation";
+    ProviderModuleName = "pyCmpiProvider_SUSE_PackageRepositoryLocation";
+    ProviderName = "SUSE_PackageRepositoryLocation";
+    ClassName = "SUSE_PackageRepositoryLocation";
+    Namespaces = {"root/cimv2"}; // TODO
+    ProviderType = {2,3}; // Instance, Associator
+};

@@ -1,0 +1,6 @@
+// SFCB Provider registration for SUSE_PackageRepositoryLocation
+[SUSE_PackageRepositoryLocation]
+   provider: SUSE_PackageRepositoryLocation
+   location: pyCmpiProvider
+   type: instance association
+   namespace: root/cimv2

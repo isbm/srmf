@@ -1,0 +1,22 @@
+[ Description("Return packages locations in the OS and the packaging system.")]
+class SUSE_PackageRepositoryLocation : CIM_SystemPackaging {
+      [Description (
+          "Location origin of the packages." )]
+      string URL;
+
+      [Description (
+          "Returns package manager: Yum, Zypper, Apt, IPS etc." )]
+      string PackageManager;
+
+      [Description (
+          "Repository type" )]
+      string RepoType;
+
+      [Description (
+          "Returns 'yes' if repository is enabled, 'no' otherwise." )]
+      string IsEnabled;
+
+      [Description (
+          "Returns 'yes' if automatically refreshed, 'no' otherwise." )]
+      string IsAutoRefresh;
+};
