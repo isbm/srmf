@@ -158,37 +158,15 @@ class SUSE_SystemOwner(CIMProvider2):
         #   model['CreationClassName']
         #   model['Name']
 
-        #model['BusinessCategory'] = '' # TODO 
-        #model['Caption'] = '' # TODO 
         model['CommonName'] = 'Owner'
         model['Description'] = owner.memo
-        #model['ElementName'] = '' # TODO 
-        #model['EmployeeNumber'] = '' # TODO 
-        #model['EmployeeType'] = '' # TODO 
-        #model['FacsimileTelephoneNumber'] = '' # TODO 
-        #model['GivenName'] = '' # TODO 
-        #model['HomePhone'] = '' # TODO 
-        #model['HomePostalAddress'] = ['',] # TODO 
-        #model['InstanceID'] = '' # TODO 
-        #model['JPEGPhoto'] = '' # TODO 
         model['LocalityName'] = lc[-1]
         model['Mail'] = "root@" + socket.gethostname()
-        #model['Manager'] = '' # TODO 
-        #model['Mobile'] = '' # TODO 
-        #model['OU'] = '' # TODO 
         model['OwnerContact'] = owner.contact.email
         model['OwnerDescription'] = owner.description
         model['OwnerName'] = owner.name
-        #model['Pager'] = '' # TODO 
-        #model['PostalAddress'] = ['',] # TODO 
-        #model['PostalCode'] = '' # TODO 
         model['PreferredLanguage'] = lc[0]
-        #model['Secretary'] = '' # TODO 
-        #model['StateOrProvince'] = '' # TODO 
         model['Surname'] = owner.name
-        #model['TelephoneNumber'] = '' # TODO 
-        #model['Title'] = '' # TODO 
-        #model['UserID'] = '' # TODO 
 
         return model
 
