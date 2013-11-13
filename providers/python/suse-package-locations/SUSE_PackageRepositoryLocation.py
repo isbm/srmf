@@ -1,6 +1,35 @@
-"""Python Provider for SUSE_PackageRepositoryLocation
-Instruments the CIM class SUSE_PackageRepositoryLocation
-"""
+#
+# Author: Bo Maryniuk <bo@suse.de>
+#
+# The BSD 3-Clause License
+# Copyright (c) 2013, SUSE Linux Products GmbH
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met: 
+# 
+# * Redistributions of source code must retain the above copyright notice, this
+#   list of conditions and the following disclaimer.
+#
+# * Redistributions in binary form must reproduce the above copyright notice, this
+#   list of conditions and the following disclaimer in the documentation and/or
+#   other materials provided with the distribution.
+#
+# * Neither the name of the SUSE Linux Products GmbH nor the names of its contributors may
+#   be used to endorse or promote products derived from this software without
+#   specific prior written permission.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 
 import pywbem
 import os
@@ -110,7 +139,8 @@ class RepoReader:
 
 
 class SUSE_PackageRepositoryLocation(CIMProvider2):
-    """Instrument the CIM class SUSE_PackageRepositoryLocation 
+    """
+    Instrument the CIM class SUSE_PackageRepositoryLocation 
     Return packages locations in the OS and the packaging system.
     """
 
@@ -119,29 +149,15 @@ class SUSE_PackageRepositoryLocation(CIMProvider2):
         logger.log_debug('Initializing provider %s from %s' % (self.__class__.__name__, __file__))
 
 
-    def get_instance(self, env, model):
-        """Return an instance.
-
-        Keyword arguments:
-        env -- Provider Environment (pycimmb.ProviderEnvironment)
-        model -- A template of the pywbem.CIMInstance to be returned.  The 
-            key properties are set on this instance to correspond to the 
-            instanceName that was requested.  The properties of the model
-            are already filtered according to the PropertyList from the 
-            request.  Only properties present in the model need to be
-            given values.  If you prefer, you can set all of the 
-            values, and the instance will be filtered for you. 
-
-        Possible Errors:
-        CIM_ERR_ACCESS_DENIED
-        CIM_ERR_INVALID_PARAMETER (including missing, duplicate, unrecognized 
-            or otherwise incorrect parameters)
-        CIM_ERR_NOT_FOUND (the CIM Class does exist, but the requested CIM 
-            Instance does not exist in the specified namespace)
-        CIM_ERR_FAILED (some other unspecified error occurred)
-
+    def get_instance(self, env, model, repo=None):
         """
-        
+        Return an instance.
+        """
+
+        # Enumerating instances only
+        if not repo:
+            raise pywbem.CIMError(pywbem.CIM_ERR_NOT_FOUND)
+
         logger = env.get_logger()
         logger.log_debug('Entering %s.get_instance()' \
                 % self.__class__.__name__)
@@ -151,59 +167,35 @@ class SUSE_PackageRepositoryLocation(CIMProvider2):
         #   model['Antecedent']
         #   model['Dependent']
 
-        model['IsAutoRefresh'] = '' # TODO 
-        model['IsEnabled'] = '' # TODO 
-        model['PackageManager'] = '' # TODO 
-        model['RepoType'] = '' # TODO 
-        model['URL'] = '' # TODO 
+        model['IsAutoRefresh'] = repo.auto_refresh
+        model['IsEnabled'] = repo.enabled
+        model['PackageManager'] = repo.pkg_manager
+        model['RepoType'] = repo.pkg_type
+        model['URL'] = repo.url # TODO: deal with the "repo.path" for Zypper
+        model['Name'] = repo.name
         
         return model
 
 
     def enum_instances(self, env, model, keys_only):
-        """Enumerate instances.
-
-        The WBEM operations EnumerateInstances and EnumerateInstanceNames
-        are both mapped to this method. 
-        This method is a python generator
-
-        Keyword arguments:
-        env -- Provider Environment (pycimmb.ProviderEnvironment)
-        model -- A template of the pywbem.CIMInstances to be generated.  
-            The properties of the model are already filtered according to 
-            the PropertyList from the request.  Only properties present in 
-            the model need to be given values.  If you prefer, you can 
-            always set all of the values, and the instance will be filtered 
-            for you. 
-        keys_only -- A boolean.  True if only the key properties should be
-            set on the generated instances.
-
-        Possible Errors:
-        CIM_ERR_FAILED (some other unspecified error occurred)
-
+        """
+        Enumerate instances.
         """
 
         logger = env.get_logger()
         logger.log_debug('Entering %s.enum_instances()' \
                 % self.__class__.__name__)
                 
-        # Prime model.path with knowledge of the keys, so key values on
-        # the CIMInstanceName (model.path) will automatically be set when
-        # we set property values on the model. 
         model.path.update({'Dependent': None, 'Antecedent': None})
 
-        # Here we iterate the thing
         for repo in RepoReader().get_repositories():
-            pass
-        
-        while False: # TODO more instances?
-            #model['Antecedent'] = pywbem.CIMInstanceName(classname='CIM_PhysicalElement', ...) # TODO (type = REF (pywbem.CIMInstanceName(classname='CIM_PhysicalElement', ...))    
-            #model['Dependent'] = pywbem.CIMInstanceName(classname='CIM_System', ...) # TODO (type = REF (pywbem.CIMInstanceName(classname='CIM_System', ...))
+            model['Antecedent'] = pywbem.CIMInstanceName(classname='CIM_PhysicalElement')
+            model['Dependent'] = pywbem.CIMInstanceName(classname='CIM_System')
             if keys_only:
                 yield model
             else:
                 try:
-                    yield self.get_instance(env, model)
+                    yield self.get_instance(env, model, repo)
                 except pywbem.CIMError, (num, msg):
                     if num not in (pywbem.CIM_ERR_NOT_FOUND, pywbem.CIM_ERR_ACCESS_DENIED):
                         raise
@@ -218,6 +210,7 @@ class SUSE_PackageRepositoryLocation(CIMProvider2):
 
         raise pywbem.CIMError(pywbem.CIM_ERR_NOT_SUPPORTED)
 
+
     def delete_instance(self, env, instance_name):
         """
         Delete the instance. This is always denied.
@@ -230,61 +223,8 @@ class SUSE_PackageRepositoryLocation(CIMProvider2):
 
     def references(self, env, object_name, model, result_class_name, role,
                    result_role, keys_only):
-        """Instrument Associations.
-
-        All four association-related operations (Associators, AssociatorNames, 
-        References, ReferenceNames) are mapped to this method. 
-        This method is a python generator
-
-        Keyword arguments:
-        env -- Provider Environment (pycimmb.ProviderEnvironment)
-        object_name -- A pywbem.CIMInstanceName that defines the source 
-            CIM Object whose associated Objects are to be returned.
-        model -- A template pywbem.CIMInstance to serve as a model
-            of the objects to be returned.  Only properties present on this
-            model need to be set. 
-        result_class_name -- If not empty, this string acts as a filter on 
-            the returned set of Instances by mandating that each returned 
-            Instances MUST represent an association between object_name 
-            and an Instance of a Class whose name matches this parameter
-            or a subclass. 
-        role -- If not empty, MUST be a valid Property name. It acts as a 
-            filter on the returned set of Instances by mandating that each 
-            returned Instance MUST refer to object_name via a Property 
-            whose name matches the value of this parameter.
-        result_role -- If not empty, MUST be a valid Property name. It acts 
-            as a filter on the returned set of Instances by mandating that 
-            each returned Instance MUST represent associations of 
-            object_name to other Instances, where the other Instances play 
-            the specified result_role in the association (i.e. the 
-            name of the Property in the Association Class that refers to 
-            the Object related to object_name MUST match the value of this 
-            parameter).
-        keys_only -- A boolean.  True if only the key properties should be
-            set on the generated instances.
-
-        The following diagram may be helpful in understanding the role, 
-        result_role, and result_class_name parameters.
-        +------------------------+                    +-------------------+
-        | object_name.classname  |                    | result_class_name |
-        | ~~~~~~~~~~~~~~~~~~~~~  |                    | ~~~~~~~~~~~~~~~~~ |
-        +------------------------+                    +-------------------+
-           |              +-----------------------------------+      |
-           |              |  [Association] model.classname    |      |
-           | object_name  |  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    |      |
-           +--------------+ object_name.classname REF role    |      |
-        (CIMInstanceName) | result_class_name REF result_role +------+
-                          |                                   |(CIMInstanceName)
-                          +-----------------------------------+
-
-        Possible Errors:
-        CIM_ERR_ACCESS_DENIED
-        CIM_ERR_NOT_SUPPORTED
-        CIM_ERR_INVALID_NAMESPACE
-        CIM_ERR_INVALID_PARAMETER (including missing, duplicate, unrecognized 
-            or otherwise incorrect parameters)
-        CIM_ERR_FAILED (some other unspecified error occurred)
-
+        """
+        Instrument Associations.
         """
 
         logger = env.get_logger()

@@ -1,6 +1,10 @@
 [ Description("Return packages locations in the OS and the packaging system.")]
 class SUSE_PackageRepositoryLocation : CIM_SystemPackaging {
       [Description (
+          "Returns the name of the repository (alias)." )]
+      string Name;
+
+      [Description (
           "Location origin of the packages." )]
       string URL;
 
