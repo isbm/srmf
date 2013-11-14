@@ -48,12 +48,20 @@ import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 /**
- *
+ * The render map is the crucial structure in the SRMF.
+ * It is core of the CIM operations that allows system administrators
+ * operate only at XML level without expanding the core with the Java code at all.
+ * The SRMF Render Map is designed to allow combining XML output with XSL templates.
+ * 
+ * It works one-to-one, one-to-many and many-to-one. In this case it is possible to apply
+ * any array of XSL documents to any amount of CIM XML and get any output with multiple
+ * or single files.
+ * 
  * @author bo
  */
 public class SRMFRenderMap {
     public static final String DEFAUILT_SRMF_RENDER_PATH = "/etc/srmf/export";
-    private List<SRMFMapDestination> rmap;
+    private final List<SRMFMapDestination> rmap;
     private Map<String, SRMFMapProvider> rproviders;
     private final File renderers;
 
@@ -64,12 +72,12 @@ public class SRMFRenderMap {
         public static final String ACCESS_TYPE_INSTANCE = "instance";
         public static final String ACCESS_TYPE_STATIC = "static";
 
-        private String namespace;
-        private String id;
-        private String title;
-        private String type;
-        private String query;
-        private String objectClass;
+        private final String namespace;
+        private final String id;
+        private final String title;
+        private final String type;
+        private final String query;
+        private final String objectClass;
 
 
         public SRMFMapProvider(String path, String id, String title, String type, String query) throws Exception {
@@ -135,16 +143,71 @@ public class SRMFRenderMap {
      */
     public static class SRMFMapDestination {
         /**
+         * Set of references that are merged into one output.
+         */
+        public static class SRMFMergeSet {
+            private final String render;
+            private final String outDestinationDescriptor;
+            private final List<SRMFMapDestination.SRMFMapRef> refSet;
+
+            public SRMFMergeSet(String render, String outDestinationDescriptor) {
+                this.render = render;
+                this.outDestinationDescriptor = outDestinationDescriptor;
+                this.refSet = new ArrayList<SRMFMapRef>();
+            }
+
+            /**
+             * XSLT render of the merge set.
+             * 
+             * @return 
+             */
+            public String getRender() {
+                return this.render;
+            }
+
+            /**
+             * Filename that needs to be generated with this particular action.
+             * The full path is calculated by the outsite facility.
+             * 
+             * @return 
+             */
+            public String getDestinationDescriptor() {
+                return outDestinationDescriptor;
+            }
+
+
+            /**
+             * Get the set of the references within the merger.
+             * 
+             * @return 
+             */
+            public List<SRMFMapRef> getReferences() {
+                return Collections.unmodifiableList(this.refSet);
+            }
+
+
+            /**
+             * Add rendering reference to the merge set.
+             * 
+             * @param reference 
+             */
+            public void addReference(SRMFMapDestination.SRMFMapRef reference) {
+                this.refSet.add(reference);
+            }
+        }
+
+
+        /**
          * Map rendering reference
          */
-        public static class SRMFMapRef {
+        public static final class SRMFMapRef {
             
             /**
              * Rendering action: XSL to output
              */
-            public static class SRMFRender {
-                private String render;
-                private String outDestinationDescriptor;
+            public static final class SRMFRender {
+                private final String render;
+                private final String outDestinationDescriptor;
 
                 /**
                  * Constructor.
@@ -176,8 +239,8 @@ public class SRMFRenderMap {
                 }
             }
 
-            private String id;
-            private List<SRMFRender> renderers;
+            private final String id;
+            private final List<SRMFRender> renderers;
 
             /**
              * Constructor.
@@ -213,9 +276,10 @@ public class SRMFRenderMap {
             }
         }
         
-        private String name; // ID of the render.
-        private String title;
-        private List<SRMFMapRef> references;
+        private final String name; // ID of the render.
+        private final String title;
+        private final List<SRMFMapRef> references;
+        private final List<SRMFMapDestination.SRMFMergeSet> mergeRefSets;
 
         /**
          * Constructor.
@@ -227,6 +291,15 @@ public class SRMFRenderMap {
             this.name = name;
             this.title = title;
             this.references = new ArrayList<SRMFMapDestination.SRMFMapRef>();
+            this.mergeRefSets = new ArrayList<SRMFMapDestination.SRMFMergeSet>();
+        }
+
+        /**
+         * Add a merger set.
+         * @param mergeSet 
+         */
+        protected void addMergeSet(SRMFMapDestination.SRMFMergeSet mergeSet) {
+            this.mergeRefSets.add(mergeSet);
         }
 
         /**
@@ -263,13 +336,24 @@ public class SRMFRenderMap {
         public List<SRMFMapRef> getReferences() {
             return Collections.unmodifiableList(this.references);
         }
+
+        /**
+         * Get merge sets.
+         * 
+         * @return 
+         */
+        public List<SRMFMergeSet> getMergeSets() {
+            return Collections.unmodifiableList(this.mergeRefSets);
+        }
+        
+        
     }
 
 
     /**
      * Render map constructor.
      * 
-     * @param renderMapXMLSource 
+     * @param renderers 
      */
     public SRMFRenderMap(File renderers) {
         this.renderers = renderers;
@@ -281,6 +365,10 @@ public class SRMFRenderMap {
      * Load mapping from the file.
      * 
      * @param mapping 
+     * @param providers 
+     * @throws java.io.IOException 
+     * @throws javax.xml.parsers.ParserConfigurationException 
+     * @throws org.xml.sax.SAXException 
      */
     public void loadFromFile(File mapping, URL providers)
             throws IOException,
@@ -303,23 +391,67 @@ public class SRMFRenderMap {
         // Load mapping
         this.rmap.clear();
         NodeList destinationNodeList = mapping.getElementsByTagName("destination");
-        for (int i = 0; i < destinationNodeList.getLength(); i++) {
-            Element destElement = (Element) destinationNodeList.item(i);
-            SRMFMapDestination destination = new SRMFMapDestination(destElement.getAttribute("name"),
-                                                                    destElement.getAttribute("title"));
-            NodeList refNodeList = destElement.getElementsByTagName("ref");
-            for (int j = 0; j < refNodeList.getLength(); j++) {
-                Element refElement = (Element) refNodeList.item(j);
-                NodeList renderNodeList = refElement.getElementsByTagName("render");
-                SRMFMapDestination.SRMFMapRef reference = new SRMFMapDestination.SRMFMapRef(refElement.getAttribute("id"));
-                for (int k = 0; k < renderNodeList.getLength(); k++) {
-                    Element renderElement = (Element) renderNodeList.item(k);
-                    reference.addRender(new SRMFMapDestination.SRMFMapRef.SRMFRender(renderElement.getAttribute("id"), renderElement.getAttribute("out")));
+        for (int destNodeIdx = 0; destNodeIdx < destinationNodeList.getLength(); destNodeIdx++) {
+            Element destElement = (Element) destinationNodeList.item(destNodeIdx);
+
+            NodeList mergeNodeList = destElement.getElementsByTagName("merge");
+            if (mergeNodeList != null && mergeNodeList.getLength() > 0) {
+                // Get merge sets with their references (these would require merging at the end)
+                SRMFMapDestination destination = new SRMFMapDestination(destElement.getAttribute("name"),
+                                                                        destElement.getAttribute("title"));
+                for (int mdlIdx = 0; mdlIdx < mergeNodeList.getLength(); mdlIdx++) {
+                    Element mergeNode = (Element) mergeNodeList.item(mdlIdx);
+                    SRMFMapDestination.SRMFMergeSet mergeSet = new SRMFMapDestination.SRMFMergeSet(mergeNode.getAttribute("id"),
+                                                                                                   mergeNode.getAttribute("out"));
+                    NodeList refNodeList = mergeNode.getElementsByTagName("ref");
+                    for (int rnlIdx = 0; rnlIdx < refNodeList.getLength(); rnlIdx++) {
+                        mergeSet.addReference(this.getSingleReference((Element) refNodeList.item(rnlIdx)));
+                    }
+                    destination.addMergeSet(mergeSet);
                 }
-                destination.addReference(reference);
+                this.rmap.add(destination);
+            } else {
+                // Get single references
+                SRMFMapDestination destination = new SRMFMapDestination(destElement.getAttribute("name"),
+                                                                        destElement.getAttribute("title"));
+                this.fillReferences(destElement, destination);
+                this.rmap.add(destination);
             }
-            this.rmap.add(destination);
         }
+    }
+    
+    /**
+     * Fill-in the destination references.
+     * 
+     * @param node
+     * @param destination
+     * @return 
+     */
+    private SRMFMapDestination fillReferences(Element node, SRMFMapDestination destination) {
+        NodeList refNodeList = node.getElementsByTagName("ref");
+        for (int refIdx = 0; refIdx < refNodeList.getLength(); refIdx++) {
+            destination.addReference(this.getSingleReference((Element) refNodeList.item(refIdx)));
+        }
+        
+        return destination;
+    }
+    
+
+    /**
+     * Get one reference from the "ref" element.
+     * 
+     * @param ref
+     * @return 
+     */
+    private SRMFMapDestination.SRMFMapRef getSingleReference(Element ref) {
+        NodeList renderNodeList = ref.getElementsByTagName("render");
+        SRMFMapDestination.SRMFMapRef reference = new SRMFMapDestination.SRMFMapRef(ref.getAttribute("id"));
+        for (int k = 0; k < renderNodeList.getLength(); k++) {
+            Element renderElement = (Element) renderNodeList.item(k);
+            reference.addRender(new SRMFMapDestination.SRMFMapRef.SRMFRender(renderElement.getAttribute("id"), renderElement.getAttribute("out")));
+        }
+        
+        return reference;
     }
     
     
@@ -380,7 +512,9 @@ public class SRMFRenderMap {
     /**
      * Get render XSL stylesheet by the ID.
      * 
-     * @param destination 
+     * @param destinationId
+     * @return 
+     * @throws java.io.IOException
      */
     public File getRenderingStyle(String destinationId) throws IOException {
         File style = new File(this.renderers.getAbsolutePath() + "/" + destinationId + ".xsl");
