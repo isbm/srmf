@@ -146,6 +146,7 @@ public class CIMClientLib {
     private SRMFMessageMeta currentSRMFMessageMeta;
     
     private CIMObjectMapper objectMapper;
+    private boolean debugMode;
 
 
     /**
@@ -158,6 +159,7 @@ public class CIMClientLib {
      */
     public CIMClientLib(String hostname, SRMFConfig config, URL optionalIndex) throws Exception {
         this.setup = config;
+        this.debugMode = false;
 
         // Install XML sniffer
         CIMXMLTraceListener xmlListener = new CIMXMLTraceListener() {
@@ -270,6 +272,16 @@ public class CIMClientLib {
         this.namespace = namespace;
         this.objectMapper.setNamespace(namespace);
     }
+    
+    
+    /**
+     * Show fully printed tracebacks, if errors occurs.
+     * 
+     * @param b 
+     */
+    public void setTraceCrashes(boolean debug) {
+        this.debugMode = debug;
+    }
 
     /**
      * Inspect objects.
@@ -287,6 +299,9 @@ public class CIMClientLib {
                 it.close();
             } catch (Exception ex) {
                 System.err.println(String.format(">>> Failed to process %s provider!", objName));
+                if (this.debugMode) {
+                    ex.printStackTrace();
+                }
             }
         }
         this.traceMode = false;
@@ -397,6 +412,11 @@ public class CIMClientLib {
                 try {
                     this.renderReference(references.get(refIdx), outputPath);
                 } catch (Exception ex) {
+                    if (this.debugMode) {
+                        System.err.println("\nDetailed trace:");
+                        ex.printStackTrace();
+                        System.err.println("\n");
+                    }
                     System.err.println(String.format("Failed to export \"%s\" batch: %s",
                                                      mergeSet.getRender(),
                                                      ex.getLocalizedMessage()));
@@ -457,6 +477,9 @@ public class CIMClientLib {
      */
     private CloseableIterator<CIMInstance> executeQuery(String query, String namespace)
             throws WBEMException {
+        if (this.debugMode) {
+            System.err.println("Query: " + query);
+        }
         return this.client.execQuery(new CIMObjectPath(null, null, null,
                 (namespace == null ? this.namespace : namespace), "", null), query, "WQL");
     }
@@ -657,6 +680,7 @@ public class CIMClientLib {
                     SRMFConfig.initialize(params.get("config") != null ? params.get("config")[0] : null),
                     params.get("index-url") != null ? new URL(params.get("index-url")[0]) : null);
             cimclient.setNamespace(params.get("namespace")[0]);
+            cimclient.setTraceCrashes(params.containsKey("trace"));
             
             if (params.containsKey("snapshot")) {
                 cimclient.doManifestSnapshot();

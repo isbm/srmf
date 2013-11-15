@@ -29,15 +29,15 @@
       </ref>
       
       <!-- Get preferences section -->
-      <ref id="os-identity">
-	<render id="cim-description-kiwi"
-		out="file:kiwi-clone-os-description.xml"
+      <ref id="system-owner">
+	<render id="cim-system-owner-kiwi"
+		out="file:kiwi-clone-system-owner.xml"
 		lifecycle="temporary" />
       </ref>
       
       <!-- Get repository section for repository URL, type, name, location etc -->
-      <ref id="repository-list">
-	<render id="cim-description-kiwi"
+      <ref id="system-repositories-list">
+	<render id="cim-system-repositories-kiwi"
 		out="file:kiwi-clone-package-repository.xml"
 		lifecycle="temporary" />
       </ref>

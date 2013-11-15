@@ -2,7 +2,18 @@
 <objects>
   <include url="file:///etc/srmf/manifest/info/system/runtime/process-list.xml" />
   <include url="file:///etc/srmf/manifest/info/system/software/installed-packages.xml"/>
+
   <object id="computer-system"
           path="root/cimv2:CIM_ComputerSystem"
           title="Computer system" type="static" />
+
+  <object id="system-owner" 
+          path="root/cimv2:SUSE_SystemOwner"
+	  type="instance"
+	  title="Describes the system ownership."/>
+
+  <object id="system-repositories-list"
+          path="root/cimv2:SUSE_PackageRepositoryLocation"
+	  type="instance"
+	  title="Returns all repositories in the system."/>
 </objects>
