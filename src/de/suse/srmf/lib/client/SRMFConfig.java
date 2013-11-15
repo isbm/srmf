@@ -57,7 +57,7 @@ public final class SRMFConfig {
      * @throws IOException 
      */
     private SRMFConfig(String alternativePath) throws IOException {
-        File setupFile = new File(alternativePath != null ? alternativePath : "/etc/srmf.conf");
+        File setupFile = new File(alternativePath != null ? alternativePath : "/etc/srmf/srmf.conf");
         if (!setupFile.exists()) {
             System.err.println(String.format("Warning: %s does not exists. Using default in current directly.", setupFile.getCanonicalPath()));
             setupFile = new File("srmf.conf");

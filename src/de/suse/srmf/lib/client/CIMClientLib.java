@@ -133,7 +133,7 @@ class SRMFMessageMeta {
 public class CIMClientLib {
     public static final String SRMF_MAP_FILE = "srmf-map.xml";
     public static final String SRMF_OBJ_FILE = "srmf-index.xml";
-    public static final String SRMF_UNIX_DEFAULT_CONF_PATH = "/etc/srmf/conf";
+    public static final String SRMF_UNIX_DEFAULT_CONF_PATH = "/etc/srmf/";
 
     private WBEMClient client;
     private String targetSystemHostname;
@@ -151,7 +151,9 @@ public class CIMClientLib {
     /**
      * Constructor.
      * 
-     * @param location
+     * @param hostname
+     * @param config
+     * @param optionalIndex
      * @throws Exception 
      */
     public CIMClientLib(String hostname, SRMFConfig config, URL optionalIndex) throws Exception {
@@ -383,27 +385,65 @@ public class CIMClientLib {
             throw new Exception(String.format("Destination \"%s\" not recognized.", destinationId));
         }
 
+        List<SRMFRenderMap.SRMFMapDestination.SRMFMapRef> references = null;
         this.traceMode = true;
-        List<SRMFRenderMap.SRMFMapDestination.SRMFMapRef> references = dst.getReferences();
-        for (int i = 0; i < references.size(); i++) {
-            SRMFRenderMap.SRMFMapDestination.SRMFMapRef sRMFMapRef = references.get(i);
-            SRMFRenderMap.SRMFMapProvider sRMFMapProvider = this.exportSRMFRenderMap.getProviderByID(sRMFMapRef.getId());
-            try {
-                this.currentSRMFMapRefID = sRMFMapRef.getRenderers();
-                ((RichArrayList) this.currentSRMFMapRefID).addAttribute("outputPath", this.setup.getItem(".srmf.manifest.export",
-                                                                                                         outputPath != null ? outputPath[0] : null));
-                ((RichArrayList) this.currentSRMFMapRefID).addAttribute("targetSystemHostname", this.targetSystemHostname);
-                if (sRMFMapProvider.getType().equals(SRMFRenderMap.SRMFMapProvider.ACCESS_TYPE_STATIC)) {
-                    this.executeQuery(sRMFMapProvider.getQuery(), sRMFMapProvider.getNamespace());
-                } else if (sRMFMapProvider.getType().equals(SRMFRenderMap.SRMFMapProvider.ACCESS_TYPE_INSTANCE)) {
-                    this.enumerateInstances(sRMFMapProvider.getObjectClass(), sRMFMapProvider.getNamespace());
-                } else {
-                    System.err.println("ERROR: Skipping '%s' (%s) - Uknown access type.".format(sRMFMapProvider.getTitle(), sRMFMapProvider.getId()));
+
+        // Export merging render references
+        List<SRMFRenderMap.SRMFMapDestination.SRMFMergeSet> mergeSets = dst.getMergeSets();
+        for (int mrgIdx = 0; mrgIdx < mergeSets.size(); mrgIdx++) {
+            SRMFRenderMap.SRMFMapDestination.SRMFMergeSet mergeSet = mergeSets.get(mrgIdx);
+            references = mergeSet.getReferences();
+            for (int refIdx = 0; refIdx < references.size(); refIdx++) {
+                try {
+                    this.renderReference(references.get(refIdx), outputPath);
+                } catch (Exception ex) {
+                    System.err.println(String.format("Failed to export \"%s\" batch: %s",
+                                                     mergeSet.getRender(),
+                                                     ex.getLocalizedMessage()));
                 }
-            } catch (Exception ex) {
-                System.err.println(String.format("Failed to render \"%s\" provider for %s!", sRMFMapProvider.getId(), dst.getTitle()));
             }
-            this.traceMode = false;
+            System.err.println("Committing merge for " + mergeSet.getRender() + " of " + references.size() + " artifacts.");
+        }
+
+        // Export single render references
+        references = dst.getReferences();
+        for (int refIdx = 0; refIdx < references.size(); refIdx++) {
+            try {
+                this.renderReference(references.get(refIdx), outputPath);
+            } catch (Exception ex) {
+                System.err.println(String.format("Failed to render \"%s\" provider for %s!",
+                                                 this.exportSRMFRenderMap.getProviderByID(
+                                                         references.get(refIdx).getId()).getId(), dst.getTitle()));
+            }
+        }
+
+        this.traceMode = false;
+    }
+
+
+    /**
+     * Export one render reference.
+     * 
+     * @param sRMFMapRef 
+     */
+    private void renderReference(SRMFRenderMap.SRMFMapDestination.SRMFMapRef sRMFMapRef, 
+                                 String[] outputPath)
+            throws WBEMException, Exception {
+        SRMFRenderMap.SRMFMapProvider sRMFMapProvider = this.exportSRMFRenderMap.getProviderByID(sRMFMapRef.getId());
+        if (sRMFMapProvider == null) {
+            throw new Exception(String.format("Provider \"%s\" was not found.", sRMFMapRef.getId()));
+        }
+        
+        this.currentSRMFMapRefID = sRMFMapRef.getRenderers();
+        ((RichArrayList) this.currentSRMFMapRefID).addAttribute("outputPath", this.setup.getItem(".srmf.manifest.export",
+                                                                                                 outputPath != null ? outputPath[0] : null));
+        ((RichArrayList) this.currentSRMFMapRefID).addAttribute("targetSystemHostname", this.targetSystemHostname);
+        if (sRMFMapProvider.getType().equals(SRMFRenderMap.SRMFMapProvider.ACCESS_TYPE_STATIC)) {
+            this.executeQuery(sRMFMapProvider.getQuery(), sRMFMapProvider.getNamespace());
+        } else if (sRMFMapProvider.getType().equals(SRMFRenderMap.SRMFMapProvider.ACCESS_TYPE_INSTANCE)) {
+            this.enumerateInstances(sRMFMapProvider.getObjectClass(), sRMFMapProvider.getNamespace());
+        } else {
+            System.err.println("ERROR: Skipping '%s' (%s) - Uknown access type.".format(sRMFMapProvider.getTitle(), sRMFMapProvider.getId()));
         }
     }
     
@@ -528,7 +568,7 @@ public class CIMClientLib {
         System.err.println("SrMF v0.1, Copyright (c) SUSE Linux Products GmbH");
         System.err.println("\nCommon:");
         System.err.println("\t--hostname=<hostname>\t\tHostname to use in the config file.");
-        System.err.println("\t--config=/path/to/config\tUsed /etc/srmf.conf or ./srmf.conf by default.");
+        System.err.println("\t--config=/path/to/config\tUsed /etc/srmf/srmf.conf or ./srmf.conf by default.");
         System.err.println("\t--namespace=<value>\t\tNamespace on the target machine.");
 
         System.err.println("\nDiscovery:");
